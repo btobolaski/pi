@@ -25,6 +25,37 @@
       ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
       nixpkgsFor = system: if system == "x86_64-darwin" then nixpkgs-darwin-x64 else nixpkgs;
+      # npm's prebuilt Linux binaries require standard FHS loader paths.
+      # macOS binaries do not, so Darwin keeps a plain development shell.
+      mkShell =
+        {
+          system,
+          withBun ? true,
+        }:
+        let
+          pkgs = import (nixpkgsFor system) { inherit system; };
+          shellPackages = [ pkgs.nodejs_22 ] ++ pkgs.lib.optionals withBun [ pkgs.bun ];
+          banner = ''
+            echo "pi-monorepo dev shell"
+            echo "  node: $(node --version)"
+            echo "  npm:  $(npm --version)"
+            ${if withBun then ''echo "  bun: $(bun --version)"'' else ""}
+            echo ""
+          '';
+        in
+        if pkgs.stdenv.hostPlatform.isLinux then
+          (pkgs.buildFHSEnv {
+            name = "pi-monorepo";
+            targetPkgs = _: shellPackages;
+            profile = banner;
+            runScript = "bash";
+          }).env
+        else
+          pkgs.mkShell {
+            name = "pi-monorepo";
+            buildInputs = shellPackages;
+            shellHook = banner;
+          };
       packageFor =
         system:
         let
@@ -33,6 +64,14 @@
         pkgs.callPackage ./nix/package.nix { source = self; };
     in
     {
+      devShells = forAllSystems (system: {
+        default = mkShell { inherit system; };
+        no-bun = mkShell {
+          inherit system;
+          withBun = false;
+        };
+      });
+
       packages = forAllSystems (system: {
         default = packageFor system;
         pi = packageFor system;
