@@ -105,7 +105,7 @@ function makeAssistantToolCall(): AssistantMessage {
 			cacheRead: 0,
 			cacheWrite: 0,
 			totalTokens: 0,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" as const },
 		},
 		stopReason: "toolUse",
 		timestamp: 2,
@@ -385,6 +385,7 @@ describe("deferred tools", () => {
 			deferredToolsMode: "kimi",
 			sessionAffinityFormat: "openai",
 			supportsLongCacheRetention: false,
+			openRouterReconcileCostFromGenerationEndpoint: false,
 		});
 
 		expect(messages.map((message) => message.role)).toEqual(["user", "assistant", "tool", "tool", "system", "user"]);
@@ -533,7 +534,7 @@ describe("deferred tools", () => {
 				cacheRead: 0,
 				cacheWrite: 0,
 				totalTokens: 100,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" as const },
 			},
 			stopReason: "stop",
 		};

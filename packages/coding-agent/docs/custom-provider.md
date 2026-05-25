@@ -221,7 +221,7 @@ Calls made after the initial extension load phase are applied immediately, so no
 The `api` field determines which streaming implementation is used:
 
 | API | Use for |
-|-----|---------|
+| ----- | --------- |
 | `anthropic-messages` | Anthropic Claude API and compatibles |
 | `openai-completions` | OpenAI Chat Completions API and compatibles |
 | `openai-responses` | OpenAI Responses API |
@@ -397,6 +397,7 @@ interface OAuthCredentials {
 For providers with non-standard APIs, implement `streamSimple`. Study the existing provider implementations before writing your own:
 
 **Reference implementations:**
+
 - [anthropic.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/ai/src/providers/anthropic.ts) - Anthropic Messages API
 - [mistral.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/ai/src/providers/mistral.ts) - Mistral Conversations API
 - [openai-completions.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/ai/src/providers/openai-completions.ts) - OpenAI Chat Completions
@@ -440,7 +441,7 @@ function streamMyProvider(
         cacheRead: 0,
         cacheWrite: 0,
         totalTokens: 0,
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
       },
       stopReason: "pending",
       timestamp: Date.now(),
@@ -637,7 +638,7 @@ pi.registerProvider("my-provider", {
 Test your provider against the same test suites used by built-in providers. Copy and adapt these test files from [packages/ai/test/](https://github.com/earendil-works/pi-mono/tree/main/packages/ai/test):
 
 | Test | Purpose |
-|------|---------|
+| ------ | --------- |
 | `stream.test.ts` | Basic streaming, text output |
 | `tokens.test.ts` | Token counting and usage |
 | `abort.test.ts` | AbortSignal handling |
@@ -754,11 +755,13 @@ interface ProviderModelConfig {
     thinkingFormat?: "openai" | "openrouter" | "deepseek" | "together" | "baseten" | "zai" | "qwen" | "chat-template" | "qwen-chat-template" | "string-thinking" | "ant-ling";
     chatTemplateKwargs?: Record<string, string | number | boolean | null | { "$var": "thinking.enabled" | "thinking.effort" | "thinking.budget"; omitWhenOff?: boolean }>;
     chatTemplateArgs?: Record<string, string | number | boolean | null | { "$var": "thinking.enabled" | "thinking.effort" | "thinking.budget"; omitWhenOff?: boolean }>;
+    zaiToolStream?: boolean;
     thinkingTokenBudgetField?: "thinking_token_budget" | "thinking_budget" | "thinking_budget_tokens";
     supportsThinkingTokenBudget?: boolean;
     cacheControlFormat?: "anthropic";
     sessionAffinityFormat?: "openai" | "openai-nosession" | "openrouter";
     sendSessionAffinityHeaders?: boolean;
+    openRouterReconcileCostFromGenerationEndpoint?: boolean;
 
     // anthropic-messages
     supportsEagerToolInputStreaming?: boolean;

@@ -31,9 +31,9 @@ type _AiModelInputsFitProtocol = Assert<AiModelInput extends ProtocolModelInput 
 type _ProtocolModelInputsFitAi = Assert<ProtocolModelInput extends AiModelInput ? true : false>;
 /**
  * Enumerate mapped and intentionally omitted pi-ai fields so additions fail compilation here.
- * Provider replay metadata, diagnostics, cache-write retention splits, model transport settings,
- * model sampling defaults, pricing tiers, and deferred-tool availability remain intentionally
- * server-side.
+ * Provider replay metadata, diagnostics, cache-write retention splits, usage cost provenance,
+ * model transport settings, model sampling defaults, pricing tiers, and deferred-tool availability
+ * remain intentionally server-side.
  */
 type _AiTextContentFieldsAccountedFor = Assert<ExactKeys<AiTextContent, "type" | "text" | "textSignature">>;
 type _AiThinkingContentFieldsAccountedFor = Assert<
@@ -53,7 +53,7 @@ type _AiUsageFieldsAccountedFor = Assert<
 	>
 >;
 type _AiUsageCostFieldsAccountedFor = Assert<
-	ExactKeys<AiUsage["cost"], "input" | "output" | "cacheRead" | "cacheWrite" | "total">
+	ExactKeys<AiUsage["cost"], "input" | "output" | "cacheRead" | "cacheWrite" | "total" | "source">
 >;
 type _AiModelFieldsAccountedFor = Assert<
 	ExactKeys<

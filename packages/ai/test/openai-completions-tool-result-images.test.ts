@@ -16,7 +16,7 @@ const emptyUsage: Usage = {
 	cacheRead: 0,
 	cacheWrite: 0,
 	totalTokens: 0,
-	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 };
 
 const compat: Omit<Required<OpenAICompletionsCompat>, "deferredToolsMode" | "thinkingTokenBudgetField"> & {
@@ -47,6 +47,7 @@ const compat: Omit<Required<OpenAICompletionsCompat>, "deferredToolsMode" | "thi
 	sendSessionAffinityHeaders: false,
 	sessionAffinityFormat: "openai",
 	supportsLongCacheRetention: true,
+	openRouterReconcileCostFromGenerationEndpoint: false,
 };
 
 function buildToolResult(toolCallId: string, timestamp: number): ToolResultMessage {

@@ -4,6 +4,7 @@ import {
 	EventStream,
 	type Message,
 	type Model,
+	type Usage,
 	type UserMessage,
 } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
@@ -33,7 +34,7 @@ function createUsage() {
 		cacheRead: 0,
 		cacheWrite: 0,
 		totalTokens: 0,
-		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" as const },
 	};
 }
 
@@ -280,7 +281,7 @@ describe("agentLoop with AgentMessage", () => {
 			cacheRead: 3,
 			cacheWrite: 4,
 			totalTokens: 10,
-			cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
+			cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1, source: "pi" as const },
 		};
 		const patchedToolUsage = {
 			input: 5,
@@ -288,9 +289,9 @@ describe("agentLoop with AgentMessage", () => {
 			cacheRead: 7,
 			cacheWrite: 8,
 			totalTokens: 26,
-			cost: { input: 0.5, output: 0.6, cacheRead: 0.7, cacheWrite: 0.8, total: 2.6 },
+			cost: { input: 0.5, output: 0.6, cacheRead: 0.7, cacheWrite: 0.8, total: 2.6, source: "pi" as const },
 		};
-		let observedToolUsage: typeof toolUsage | undefined;
+		let observedToolUsage: Usage | undefined;
 		const tool: AgentTool<typeof toolSchema, { value: string }> = {
 			name: "echo",
 			label: "Echo",

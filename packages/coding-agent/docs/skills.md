@@ -186,7 +186,7 @@ Unknown frontmatter fields are ignored.
 
 Declared skills with missing descriptions are not loaded. Malformed `SKILL.md` files and `SKILL.md` files without a description produce warnings and are not loaded. Other Markdown files without valid skill frontmatter are ignored.
 
-Name collisions (same name from different locations) warn and keep the first skill found.
+Name collisions (same name from different locations) warn and keep the highest-precedence skill. Precedence is: project local/settings paths, then project auto-discovered skills, then user local/settings paths, then user auto-discovered skills, then package-provided skills.
 
 ## Example
 

@@ -356,8 +356,12 @@ On-demand capability packages following the [Agent Skills standard](https://agen
 
 ```markdown
 <!-- ~/.pi/agent/skills/my-skill/SKILL.md -->
+---
+name: my-skill
+description: Use this skill when the user asks about X.
+---
+
 # My Skill
-Use this skill when the user asks about X.
 
 ## Steps
 1. Do this

@@ -140,6 +140,7 @@ function combineUsage(first: Usage, second: Usage): Usage {
 			cacheRead: first.cost.cacheRead + second.cost.cacheRead,
 			cacheWrite: first.cost.cacheWrite + second.cost.cacheWrite,
 			total: first.cost.total + second.cost.total,
+			source: first.cost.source === "provider" && second.cost.source === "provider" ? "provider" : "pi",
 		},
 	};
 }

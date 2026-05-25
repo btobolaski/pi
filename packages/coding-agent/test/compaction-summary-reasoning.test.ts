@@ -53,7 +53,7 @@ const mockSummaryResponse: AssistantMessage = {
 		cacheRead: 0,
 		cacheWrite: 0,
 		totalTokens: 20,
-		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 	},
 	stopReason: "stop",
 	timestamp: Date.now(),
@@ -66,6 +66,18 @@ const mockToolCallResponse: AssistantMessage = {
 };
 
 const messages: AgentMessage[] = [{ role: "user", content: "Summarize this.", timestamp: Date.now() }];
+
+function createSplitTurnPreparation(): CompactionPreparation {
+	return {
+		firstKeptEntryId: "entry-keep",
+		messagesToSummarize: messages,
+		turnPrefixMessages: messages,
+		isSplitTurn: true,
+		tokensBefore: 600000,
+		fileOps: { read: new Set(), written: new Set(), edited: new Set() },
+		settings: { enabled: true, reserveTokens: 500000, keepRecentTokens: 20000 },
+	};
+}
 
 describe("generateSummary reasoning options", () => {
 	beforeEach(() => {
@@ -241,25 +253,42 @@ describe("generateSummary reasoning options", () => {
 	});
 
 	it("clamps compaction summary maxTokens to the model output cap", async () => {
-		const preparation: CompactionPreparation = {
-			firstKeptEntryId: "entry-keep",
-			messagesToSummarize: messages,
-			turnPrefixMessages: messages,
-			isSplitTurn: true,
-			tokensBefore: 600000,
-			fileOps: { read: new Set(), written: new Set(), edited: new Set() },
-			settings: { enabled: true, reserveTokens: 500000, keepRecentTokens: 20000 },
-		};
-
-		const result = await compact(preparation, createModel(false, 128000), "test-key");
+		const result = await compact(createSplitTurnPreparation(), createModel(false, 128000), "test-key");
 
 		expect(result.usage).toEqual({
 			...mockSummaryResponse.usage,
 			input: 20,
 			output: 20,
 			totalTokens: 40,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 		});
 		expect(completeSimpleMock.mock.calls.map((call) => call[2]?.maxTokens)).toEqual([128000, 128000]);
+	});
+
+	it.each([
+		["provider", "provider", "provider"],
+		["provider", "pi", "pi"],
+		["pi", "provider", "pi"],
+		["pi", "pi", "pi"],
+	] as const)("combines %s and %s compaction cost sources as %s", async (first, second, expected) => {
+		completeSimpleMock
+			.mockResolvedValueOnce({
+				...mockSummaryResponse,
+				usage: {
+					...mockSummaryResponse.usage,
+					cost: { ...mockSummaryResponse.usage.cost, source: first },
+				},
+			})
+			.mockResolvedValueOnce({
+				...mockSummaryResponse,
+				usage: {
+					...mockSummaryResponse.usage,
+					cost: { ...mockSummaryResponse.usage.cost, source: second },
+				},
+			});
+
+		const result = await compact(createSplitTurnPreparation(), createModel(false), "test-key");
+
+		expect(result.usage?.cost.source).toBe(expected);
 	});
 });

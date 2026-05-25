@@ -283,7 +283,7 @@ describe("AgentSession model and extension characterization", () => {
 			cacheRead: 3,
 			cacheWrite: 4,
 			totalTokens: 10,
-			cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
+			cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1, source: "pi" as const },
 		};
 		const patchedToolUsage: Usage = {
 			input: 5,
@@ -291,7 +291,7 @@ describe("AgentSession model and extension characterization", () => {
 			cacheRead: 7,
 			cacheWrite: 8,
 			totalTokens: 26,
-			cost: { input: 0.5, output: 0.6, cacheRead: 0.7, cacheWrite: 0.8, total: 2.6 },
+			cost: { input: 0.5, output: 0.6, cacheRead: 0.7, cacheWrite: 0.8, total: 2.6, source: "pi" as const },
 		};
 		let observedToolUsage: Usage | undefined;
 		const echoTool: AgentTool = {

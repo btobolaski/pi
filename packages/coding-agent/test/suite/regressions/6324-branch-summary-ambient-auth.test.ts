@@ -37,7 +37,7 @@ describe("issue #6324 branch summary ambient auth", () => {
 						cacheRead: 0,
 						cacheWrite: 0,
 						totalTokens: 2,
-						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0.25 },
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0.25, source: "pi" as const },
 					},
 					stopReason: "stop",
 					timestamp: Date.now(),

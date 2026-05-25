@@ -23,7 +23,7 @@ function createUsage(totalTokens: number) {
 		cacheRead: 0,
 		cacheWrite: 0,
 		totalTokens,
-		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" as const },
 	};
 }
 
@@ -111,7 +111,7 @@ describe("AgentSession compaction characterization", () => {
 			cacheRead: 30,
 			cacheWrite: 40,
 			totalTokens: 100,
-			cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
+			cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1, source: "pi" as const },
 		};
 		const harness = await createHarness({
 			settings: { compaction: { keepRecentTokens: 1 } },
