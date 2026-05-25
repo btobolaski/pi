@@ -984,6 +984,11 @@
           "type": "boolean",
           "description": "Whether the provider supports long prompt cache retention. Defaults are API-specific or auto-detected."
         },
+        "openRouterReconcileCostFromGenerationEndpoint": {
+          "type": "boolean",
+          "description": "After an OpenRouter stream, fetch the authoritative total from /api/v1/generation with one retry and a two-second timeout. Failures are recorded in diagnostics without failing the request.",
+          "default": false
+        },
         "vllmPriority": {
           "type": "number",
           "description": "vLLM scheduler priority sent as the top-level priority request field. Lower values are handled earlier and the server default is 0. Only meaningful with --scheduling-policy priority. Off by default and not set on the generated catalog."

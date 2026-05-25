@@ -78,7 +78,7 @@ function usage(input: number, cost: number): Usage {
 		cacheRead: 0,
 		cacheWrite: 0,
 		totalTokens: input,
-		cost: { input: cost, output: 0, cacheRead: 0, cacheWrite: 0, total: cost },
+		cost: { input: cost, output: 0, cacheRead: 0, cacheWrite: 0, total: cost, source: "pi" },
 	};
 }
 

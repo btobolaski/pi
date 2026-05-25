@@ -83,9 +83,12 @@ interface Usage {
     cacheRead: number;
     cacheWrite: number;
     total: number;
+    source: "provider" | "pi";
   };
 }
 ```
+
+`cost.source` is `"provider"` when the total is provider-reported, otherwise `"pi"` for catalog pricing. Older stored usage without a source is loaded as `"pi"`.
 
 When present, `reasoning` is already included in `output`; do not add it again. `cacheWrite1h` is the subset of `cacheWrite` written with one-hour retention.
 

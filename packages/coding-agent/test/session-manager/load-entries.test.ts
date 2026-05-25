@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FileEntry, SessionEntry, SessionMessageEntry } from "../../src/core/session-manager.ts";
-import { SessionManager } from "../../src/core/session-manager.ts";
+import { parseSessionEntries, SessionManager } from "../../src/core/session-manager.ts";
 
 const UUID_V7_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -15,6 +15,65 @@ function storedEntries(build: (source: SessionManager) => void): SessionEntry[] 
 }
 
 describe("SessionManager.inMemory with preloaded entries", () => {
+	it("backfills missing cost provenance while parsing older sessions", () => {
+		const usage = {
+			input: 1,
+			output: 2,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 3,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		};
+		const timestamp = "2026-01-01T00:00:01Z";
+		const entries = parseSessionEntries(
+			[
+				{
+					type: "message",
+					id: "assistant",
+					parentId: null,
+					timestamp,
+					message: { role: "assistant", content: [], usage },
+				},
+				{
+					type: "message",
+					id: "tool",
+					parentId: "assistant",
+					timestamp,
+					message: { role: "toolResult", content: [], usage },
+				},
+				{
+					type: "compaction",
+					id: "compaction",
+					parentId: "tool",
+					timestamp,
+					summary: "summary",
+					firstKeptEntryId: "assistant",
+					tokensBefore: 3,
+					usage,
+				},
+				{
+					type: "branch_summary",
+					id: "branch",
+					parentId: "compaction",
+					timestamp,
+					fromId: "compaction",
+					summary: "summary",
+					usage,
+				},
+			]
+				.map((entry) => JSON.stringify(entry))
+				.join("\n"),
+		);
+
+		for (const entry of entries) {
+			if (entry.type === "message") {
+				expect(entry.message).toMatchObject({ usage: { cost: { source: "pi" } } });
+			} else if (entry.type === "compaction" || entry.type === "branch_summary") {
+				expect(entry.usage?.cost.source).toBe("pi");
+			}
+		}
+	});
+
 	it("adopts entries verbatim", () => {
 		const entries = storedEntries((source) => {
 			source.appendMessage(userMessage("hello"));

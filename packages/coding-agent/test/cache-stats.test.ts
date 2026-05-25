@@ -8,7 +8,7 @@ import {
 } from "../src/core/cache-stats.ts";
 import type { SessionEntry } from "../src/core/session-manager.ts";
 
-const zeroCost = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 };
+const zeroCost = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" as const };
 
 const models: ModelPriceSource = {
 	// $/million tokens; used as cache-read price fallback on full-miss turns
