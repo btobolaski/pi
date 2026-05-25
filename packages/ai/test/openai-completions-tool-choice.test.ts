@@ -1409,6 +1409,7 @@ describe("openai-completions tool_choice", () => {
 				requiresReasoningContentOnAssistantMessages: false,
 				thinkingFormat: "openai",
 				openRouterRouting: {},
+				openRouterReconcileCostFromGenerationEndpoint: false,
 				vercelGatewayRouting: {},
 				chatTemplateKwargs: {},
 				chatTemplateArgs: {},

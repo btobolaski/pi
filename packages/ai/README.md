@@ -238,7 +238,7 @@ for (const block of response.content) {
 
 Snippets in the rest of this README assume a `models` collection set up like this (with the relevant providers registered).
 
-`usage.cost.total` is the best available total cost. For OpenRouter chat responses, it uses the cost reported by OpenRouter, including both the OpenRouter charge and upstream inference cost for BYOK requests. When provider accounting is unavailable or invalid, it falls back to the model's catalog rates. The `input`, `output`, `cacheRead`, and `cacheWrite` cost components remain catalog estimates and may not sum to a provider-reported total.
+`usage.cost.total` is the best available total cost. For OpenRouter chat responses, it uses the cost reported by OpenRouter, including both the OpenRouter charge and upstream inference cost for BYOK requests. When provider accounting is unavailable or invalid, it falls back to the model's catalog rates. For OpenRouter chat responses, the `input`, `output`, `cacheRead`, and `cacheWrite` cost components are proportionally scaled from catalog estimates to sum to the billed total. If the catalog estimate is zero, the entire billed amount is assigned to `input`.
 
 ## Providers and Models
 
@@ -490,7 +490,7 @@ const credential = {
 Built-in providers resolve these env vars (Node.js; in browsers pass `apiKey` explicitly):
 
 | Provider | Environment Variable(s) |
-|----------|------------------------|
+| ---------- | ------------------------ |
 | OpenAI | `OPENAI_API_KEY` |
 | Ant Ling | `ANT_LING_API_KEY` |
 | Azure OpenAI | `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_BASE_URL` (e.g. `https://{resource}.ai.azure.com`) or `AZURE_OPENAI_RESOURCE_NAME`. Supports `*.openai.azure.com`, `*.cognitiveservices.azure.com` and `*.ai.azure.com`; root endpoints auto-normalize to `/openai/v1`. Optional: `AZURE_OPENAI_API_VERSION` (default `v1`), `AZURE_OPENAI_DEPLOYMENT_NAME_MAP`. |
@@ -685,6 +685,7 @@ for await (const event of s) {
 ```
 
 **Important notes about partial tool arguments:**
+
 - During `toolcall_delta` events, `arguments` contains the best-effort parse of partial JSON
 - Fields may be missing or incomplete - always check for existence before use
 - String values may be truncated mid-word
@@ -736,7 +737,7 @@ Every non-terminal event's `partial` is the shared live response-so-far helper. 
 All streaming events emitted during assistant message generation:
 
 | Event Type | Description | Key Properties |
-|------------|-------------|----------------|
+| ------------ | ------------- | ---------------- |
 | `start` | Stream begins | `partial`: Initial assistant message structure |
 | `text_start` | Text block starts | `contentIndex`: Position in content array |
 | `text_delta` | Text chunk received | `delta`: New text, `contentIndex`: Position |
@@ -1424,7 +1425,7 @@ const s = stream(claudeModel, normalizeContext(context), {
 Built-in API implementations live under `./api/<api-id>`:
 
 | API id | Options type |
-|--------|--------------|
+| -------- | -------------- |
 | `anthropic-messages` | `AnthropicOptions` |
 | `openai-completions` | `OpenAICompletionsOptions` |
 | `openai-responses` | `OpenAIResponsesOptions` |
@@ -1466,6 +1467,7 @@ interface OpenAICompletionsCompat {
   cacheControlFormat?: 'anthropic';  // Anthropic-style cache_control on system prompt, last tool, and last user/assistant text content
   openRouterRouting?: OpenRouterRouting; // OpenRouter routing preferences (default: {})
   vercelGatewayRouting?: VercelGatewayRouting; // Vercel AI Gateway routing preferences (default: {})
+  openRouterReconcileCostFromGenerationEndpoint?: boolean; // Fetch the generation record after an OpenRouter stream to update billed costs, including BYOK upstream spend (default: false)
 }
 
 interface OpenAIResponsesCompat {
@@ -1478,6 +1480,8 @@ interface OpenAIResponsesCompat {
 ```
 
 OpenRouter requests send `x-session-id` from `sessionId` when prompt caching is enabled. Chat Completions and Anthropic Messages both auto-detect OpenRouter endpoints unless `sendSessionAffinityHeaders` is explicitly false. On Anthropic-compatible models, `sessionAffinityFormat: "openrouter"` selects `x-session-id`; when unset, the existing `x-session-affinity` format is used. Explicit request headers take precedence over generated headers.
+
+OpenRouter billed totals set `usage.cost.totalFromProvider` to `true`; unavailable or invalid accounting falls back to catalog pricing. The optional Chat Completions reconciliation flag updates the total and proportionally rescales its components from the generation record, adding upstream inference costs for BYOK requests. Failed or incomplete lookups leave the streamed cost unchanged.
 
 If `compat` is not set, the library falls back to URL-based detection. If `compat` is partially set, unspecified fields use the detected defaults. This is useful for:
 
@@ -1562,6 +1566,7 @@ console.log(faux.state.callCount);
 ```
 
 Notes:
+
 - Responses are consumed from a queue in request start order.
 - If the queue is empty, the faux provider returns an assistant error message with `errorMessage: "No more faux responses queued"`.
 - Use `faux.setResponses([...])` to replace the remaining queue and `faux.appendResponses([...])` to add more responses.
@@ -1890,7 +1895,7 @@ import { getModel, complete } from '@earendil-works/pi-ai/compat';
 Compat is a strict superset of the root entrypoint, so a file can switch its import path wholesale. It will be removed in a future release; migrate to `createModels()` + provider factories:
 
 | Old | New |
-|-----|-----|
+| ----- | ----- |
 | `getModel('openai', 'gpt-4o-mini')` | `models.getModel('openai', 'gpt-4o-mini')` or `getBuiltinModel()` from `providers/all` |
 | `getModels('anthropic')` / `getProviders()` | `models.getModels('anthropic')` / `models.getProviders()` or `getBuiltin*` |
 | `stream(model, ctx, opts)` (env-key injection) | `models.stream(model, ctx, opts)` (provider auth resolution) |

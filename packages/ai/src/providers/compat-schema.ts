@@ -278,6 +278,13 @@ const OpenAICompletionsCompatProperties = {
 		}),
 	),
 	openRouterRouting: opt(OpenRouterRoutingSchema),
+	openRouterReconcileCostFromGenerationEndpoint: opt(
+		bool({
+			description:
+				"Whether to reconcile OpenRouter cost via /api/v1/generation after the stream completes. Default: false.",
+			default: false,
+		}),
+	),
 	vercelGatewayRouting: opt(VercelGatewayRoutingSchema),
 	zaiToolStream: opt(
 		bool({

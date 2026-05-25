@@ -11,6 +11,7 @@ import type {
 	ChatCompletionSystemMessageParam,
 	ChatCompletionToolMessageParam,
 } from "openai/resources/chat/completions.js";
+import { getEnvApiKey } from "../env-api-keys.ts";
 import { calculateCost, clampThinkingLevel } from "../models.ts";
 import type {
 	AssistantMessage,
@@ -35,12 +36,14 @@ import type {
 	ToolCall,
 	ToolResultMessage,
 } from "../types.ts";
+import { appendAssistantMessageDiagnostic, createAssistantMessageDiagnostic } from "../utils/diagnostics.ts";
 import { formatProviderError, normalizeProviderError } from "../utils/error-body.ts";
 import { AssistantMessageEventStream } from "../utils/event-stream.ts";
 import { shortHash } from "../utils/hash.ts";
 import { headersToRecord } from "../utils/headers.ts";
 import { type ClientIdentity, getIdentityHeaders } from "../utils/identity.ts";
 import {
+	applyOpenRouterCost,
 	applyOpenRouterReportedCost,
 	isOpenRouterModel,
 	type OpenRouterUsageAccounting,
@@ -352,7 +355,7 @@ export const stream: StreamFunction<"openai-completions", OpenAICompletionsOptio
 			);
 			const cacheRetention = resolveCacheRetention(options?.cacheRetention, options?.env);
 			const cacheSessionId = cacheRetention === "none" ? undefined : options?.sessionId;
-			const client = createClient(
+			const { client, headers: clientHeaders } = createClient(
 				model,
 				normalizedContext,
 				apiKey,
@@ -689,6 +692,10 @@ export const stream: StreamFunction<"openai-completions", OpenAICompletionsOptio
 				throw new Error("Stream ended without finish_reason");
 			}
 
+			// Cancellation may stop the billing lookup, but must not invalidate a completed response.
+			if (compat.openRouterReconcileCostFromGenerationEndpoint && isOpenRouterModel(model)) {
+				await reconcileOpenRouterCost(model, output, apiKey, clientHeaders, options?.fetch, options?.signal);
+			}
 			stream.push({ type: "done", reason: output.stopReason, message: output });
 			stream.end();
 		} catch (error) {
@@ -773,13 +780,16 @@ function createClient(
 		Object.assign(headers, optionsHeaders);
 	}
 
-	return new OpenAI({
-		apiKey,
-		baseURL: model.baseUrl,
-		dangerouslyAllowBrowser: true,
-		fetch,
-		defaultHeaders: headers,
-	});
+	return {
+		client: new OpenAI({
+			apiKey,
+			baseURL: model.baseUrl,
+			dangerouslyAllowBrowser: true,
+			fetch,
+			defaultHeaders: headers,
+		}),
+		headers,
+	};
 }
 
 function buildParams(
@@ -1241,6 +1251,7 @@ export function convertMessages(
 					role: "system",
 					tools: convertTools(addedTools, compat),
 				};
+				// SAFETY: Kimi accepts tool definitions on a system message without a content field.
 				params.push(kimiToolMessage as unknown as ChatCompletionMessageParam);
 			}
 			const text = i === 0 ? getSystemMessageText(msg) : renderSystemMessageUpdate(msg);
@@ -1505,6 +1516,9 @@ function convertTools(
 	});
 }
 
+// Billing lookups are best effort: one retry within a two-second budget.
+const RECONCILE_TIMEOUT_MS = 2000;
+
 function parseChunkUsage(
 	// OpenRouter adds billing fields to streamed usage at runtime,
 	// although the OpenAI SDK does not type those fields.
@@ -1513,6 +1527,8 @@ function parseChunkUsage(
 		completion_tokens?: number;
 		cached_tokens?: number;
 		prompt_cache_hit_tokens?: number;
+		cost?: number;
+		cost_details?: { upstream_inference_cost?: number };
 		prompt_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number };
 		completion_tokens_details?: { reasoning_tokens?: number };
 	},
@@ -1551,6 +1567,106 @@ function parseChunkUsage(
 		applyOpenRouterReportedCost(usage, rawUsage as typeof rawUsage & OpenRouterUsageAccounting);
 	}
 	return usage;
+}
+
+async function reconcileOpenRouterCost(
+	model: Model<"openai-completions">,
+	output: AssistantMessage,
+	apiKey: string,
+	clientHeaders: ProviderHeaders,
+	requestFetch?: typeof globalThis.fetch,
+	signal?: AbortSignal,
+): Promise<void> {
+	let origin: string;
+	try {
+		origin = new URL(model.baseUrl).origin;
+	} catch {
+		return;
+	}
+	if (!output.responseId?.startsWith("gen-") || origin !== "https://openrouter.ai") {
+		return;
+	}
+
+	const headers = new Headers();
+	for (const [name, value] of Object.entries(clientHeaders)) {
+		if (value !== null) headers.set(name, value);
+	}
+	if (!headers.has("authorization")) {
+		const resolvedApiKey = apiKey === "unused" ? getEnvApiKey(model.provider) : apiKey;
+		if (!resolvedApiKey) {
+			return;
+		}
+		headers.set("authorization", `Bearer ${resolvedApiKey}`);
+	}
+
+	const url = `https://openrouter.ai/api/v1/generation?id=${encodeURIComponent(output.responseId)}`;
+	const signals: AbortSignal[] = [AbortSignal.timeout(RECONCILE_TIMEOUT_MS)];
+	if (signal) signals.push(signal);
+	const combinedSignal = AbortSignal.any(signals);
+	let failureCategory = "network";
+	try {
+		const response = await retryProviderRequest(
+			async () => {
+				failureCategory = "network";
+				const response = await (requestFetch ?? globalThis.fetch)(url, {
+					method: "GET",
+					headers,
+					signal: combinedSignal,
+				});
+				if (!response.ok) {
+					failureCategory = `http_${response.status}`;
+					throw Object.assign(new Error(`OpenRouter generation lookup failed with HTTP ${response.status}`), {
+						status: response.status,
+						headers: response.headers,
+					});
+				}
+				return response;
+			},
+			{
+				maxRetries: 1,
+				maxRetryDelayMs: RECONCILE_TIMEOUT_MS,
+				additionalRetryStatuses: [404],
+				signal: combinedSignal,
+			},
+		);
+		failureCategory = "parse";
+		const data: unknown = await response.json();
+		const generation = (
+			data as { data?: { total_cost?: unknown; is_byok?: unknown; upstream_inference_cost?: unknown } }
+		)?.data;
+		let totalCost = generation?.total_cost;
+		failureCategory = "missing_field";
+		if (
+			!generation ||
+			typeof totalCost !== "number" ||
+			!Number.isFinite(totalCost) ||
+			totalCost < 0 ||
+			typeof generation.is_byok !== "boolean"
+		) {
+			throw new Error("OpenRouter generation lookup response missing valid billing fields");
+		}
+		if (generation.is_byok) {
+			const upstreamCost = generation.upstream_inference_cost;
+			if (typeof upstreamCost !== "number" || !Number.isFinite(upstreamCost) || upstreamCost < 0) {
+				throw new Error("OpenRouter BYOK generation lookup response missing upstream inference cost");
+			}
+			totalCost += upstreamCost;
+			if (!Number.isFinite(totalCost)) throw new Error("OpenRouter generation lookup cost overflow");
+		}
+		// A zero streamed bill erased the proportions; restore the catalog baseline before scaling.
+		calculateCost(model, output.usage);
+		applyOpenRouterCost(output.usage, totalCost);
+	} catch (error) {
+		if (!signal?.aborted) {
+			appendAssistantMessageDiagnostic(
+				output,
+				createAssistantMessageDiagnostic("openrouter_cost_reconcile_failed", error, {
+					category: combinedSignal.aborted ? "network" : failureCategory,
+					responseId: output.responseId,
+				}),
+			);
+		}
+	}
 }
 
 function mapStopReason(reason: ChatCompletionChunk.Choice["finish_reason"] | string): {
@@ -1680,6 +1796,7 @@ function detectCompat(model: Model<"openai-completions">): ResolvedOpenAIComplet
 			isNvidia ||
 			isAntLing
 		),
+		openRouterReconcileCostFromGenerationEndpoint: false,
 	};
 }
 
@@ -1724,5 +1841,8 @@ function getCompat(model: Model<"openai-completions">): ResolvedOpenAICompletion
 		sessionAffinityFormat: model.compat.sessionAffinityFormat ?? detected.sessionAffinityFormat,
 		supportsLongCacheRetention: model.compat.supportsLongCacheRetention ?? detected.supportsLongCacheRetention,
 		vllmPriority: model.compat.vllmPriority,
+		openRouterReconcileCostFromGenerationEndpoint:
+			model.compat.openRouterReconcileCostFromGenerationEndpoint ??
+			detected.openRouterReconcileCostFromGenerationEndpoint,
 	};
 }
