@@ -14,7 +14,7 @@ describe("InteractiveMode compaction events", () => {
 			cacheRead: 30,
 			cacheWrite: 40,
 			totalTokens: 100,
-			cost: { input: 0.01, output: 0.02, cacheRead: 0.03, cacheWrite: 0.065, total: 0.125 },
+			cost: { input: 0.01, output: 0.02, cacheRead: 0.03, cacheWrite: 0.065, total: 0.125, source: "pi" },
 		};
 		const addCompactionCostNotice = Reflect.get(InteractiveMode.prototype, "addCompactionCostNotice") as (
 			this: { chatContainer: Container; settingsManager: { getShowCacheMissNotices(): boolean } },
@@ -55,7 +55,7 @@ describe("InteractiveMode compaction events", () => {
 			cacheRead: 30,
 			cacheWrite: 40,
 			totalTokens: 100,
-			cost: { input: 0.01, output: 0.02, cacheRead: 0.03, cacheWrite: 0.04, total: 0.1 },
+			cost: { input: 0.01, output: 0.02, cacheRead: 0.03, cacheWrite: 0.04, total: 0.1, source: "pi" },
 		};
 		const previousUsage: Usage = {
 			input: 1,
@@ -63,7 +63,7 @@ describe("InteractiveMode compaction events", () => {
 			cacheRead: 3,
 			cacheWrite: 4,
 			totalTokens: 10,
-			cost: { input: 0.001, output: 0.002, cacheRead: 0.003, cacheWrite: 0.004, total: 0.01 },
+			cost: { input: 0.001, output: 0.002, cacheRead: 0.003, cacheWrite: 0.004, total: 0.01, source: "pi" },
 		};
 		const entries: SessionEntry[] = [
 			{
@@ -113,7 +113,7 @@ describe("InteractiveMode compaction events", () => {
 			cacheRead: 30,
 			cacheWrite: 40,
 			totalTokens: 100,
-			cost: { input: 0.01, output: 0.02, cacheRead: 0.03, cacheWrite: 0.065, total: 0.125 },
+			cost: { input: 0.01, output: 0.02, cacheRead: 0.03, cacheWrite: 0.065, total: 0.125, source: "pi" },
 		};
 		const latestCompaction: SessionEntry = {
 			type: "compaction",

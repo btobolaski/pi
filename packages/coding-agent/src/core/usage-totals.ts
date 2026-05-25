@@ -1,3 +1,4 @@
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { Usage } from "@earendil-works/pi-ai/compat";
 import type { SessionEntry } from "./session-manager.ts";
 
@@ -27,6 +28,46 @@ export function addUsageToTotals(totals: UsageTotals, usage: Usage): void {
 	totals.cost += usage.cost.total;
 }
 
+/** Backfill usage persisted before cost provenance was recorded. */
+function normalizeUsageCostSource(usage: Usage): Usage {
+	if (usage.cost.source === "provider" || usage.cost.source === "pi") return usage;
+	return { ...usage, cost: { ...usage.cost, source: "pi" } };
+}
+
+function normalizeMessageUsage(message: AgentMessage): AgentMessage {
+	if ((message.role === "assistant" || message.role === "toolResult") && message.usage) {
+		return { ...message, usage: normalizeUsageCostSource(message.usage) };
+	}
+	return message;
+}
+
+interface UsageBearingEntry {
+	type: string;
+	message?: AgentMessage;
+	usage?: Usage;
+	retainedTail?: AgentMessage[];
+}
+
+/** Backfill usage provenance on entries loaded from older session formats. */
+export function normalizeEntryUsage<T extends UsageBearingEntry>(entry: T): T {
+	if (entry.type === "message" && entry.message) {
+		const message = normalizeMessageUsage(entry.message);
+		return message === entry.message ? entry : { ...entry, message };
+	}
+	if ((entry.type === "branch_summary" || entry.type === "usage") && entry.usage) {
+		const usage = normalizeUsageCostSource(entry.usage);
+		return usage === entry.usage ? entry : { ...entry, usage };
+	}
+	if (entry.type === "compaction") {
+		const usage = entry.usage ? normalizeUsageCostSource(entry.usage) : undefined;
+		const retainedTail = entry.retainedTail?.map(normalizeMessageUsage);
+		return usage === entry.usage && retainedTail === undefined
+			? entry
+			: { ...entry, ...(usage ? { usage } : {}), ...(retainedTail ? { retainedTail } : {}) };
+	}
+	return entry;
+}
+
 /** Sum of two usages, keeping the optional token splits when either side reports them. */
 export function combineUsage(first: Usage, second: Usage): Usage {
 	return {
@@ -47,6 +88,7 @@ export function combineUsage(first: Usage, second: Usage): Usage {
 			cacheRead: first.cost.cacheRead + second.cost.cacheRead,
 			cacheWrite: first.cost.cacheWrite + second.cost.cacheWrite,
 			total: first.cost.total + second.cost.total,
+			source: first.cost.source === "provider" && second.cost.source === "provider" ? "provider" : "pi",
 		},
 	};
 }
