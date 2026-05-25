@@ -116,7 +116,7 @@ const usage = (i: number, o: number): AssistantMessage["usage"] => ({
 	cacheRead: 0,
 	cacheWrite: 0,
 	totalTokens: i + o,
-	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 });
 
 export function fake(o: FakeOptions): Models & { calls: number; requests: RequestMessage[][] } {

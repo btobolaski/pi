@@ -1,4 +1,4 @@
-import type { UsageRow, UsageScan } from "@earendil-works/pi-agent-core";
+import { normalizeUsageCostSource, type UsageRow, type UsageScan } from "@earendil-works/pi-agent-core";
 import { joinSqlFragments, type SqlQuery, sql } from "../sql.ts";
 import type { SqliteDatabase, SqliteStatement } from "../types.ts";
 
@@ -13,6 +13,14 @@ export interface UsageLedgerRow {
 
 const INSERT_USAGE_LEDGER_SQL = `INSERT INTO usage_ledger (session_id, id, seq, entry_id, adjustment, usage, details)
 	VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
+function parseJson<T>(value: string, field: string): T {
+	try {
+		return JSON.parse(value) as T;
+	} catch (error) {
+		throw new Error(`Invalid usage ledger ${field}`, { cause: error });
+	}
+}
 
 function usageLedgerRowParams(sessionId: string, row: UsageRow): unknown[] {
 	return [
@@ -48,10 +56,10 @@ export function decodeUsageLedgerRow(row: UsageLedgerRow): UsageRow {
 	return {
 		id: row.id,
 		seq: row.seq,
-		usage: JSON.parse(row.usage) as UsageRow["usage"],
+		usage: normalizeUsageCostSource(parseJson<UsageRow["usage"]>(row.usage, "usage")),
 		...(row.entry_id === null ? {} : { entryId: row.entry_id }),
 		adjustment: row.adjustment !== 0,
-		...(row.details === null ? {} : { details: JSON.parse(row.details) as UsageRow["details"] }),
+		...(row.details === null ? {} : { details: parseJson<UsageRow["details"]>(row.details, "details") }),
 	};
 }
 

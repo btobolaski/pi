@@ -100,6 +100,12 @@ Choose the conservative end of any published range. A model without a lifetime f
 
 Compatibility settings should describe verified differences in the endpoint's request or response behavior. Do not enable them based only on an endpoint advertising OpenAI or Anthropic compatibility.
 
+### OpenRouter billed cost
+
+OpenRouter's streamed `usage.cost` supplies `usage.cost.total` with `source: "provider"`. Without it, Pi uses catalog pricing with `source: "pi"`.
+
+To reconcile the final total through OpenRouter's `/api/v1/generation` endpoint, set `compat.openRouterReconcileCostFromGenerationEndpoint` to `true` on the provider or model. It defaults to `false`; failed lookups keep the existing cost and add an `openrouter_cost_reconcile_failed` diagnostic.
+
 ## Use classifier models
 
 Classifier models do not chat. They answer typed questions about JSON state: pick one of several choices, answer yes or no, or give a score, each with probabilities. Pi includes TypeSafe's Jev model from these providers:
