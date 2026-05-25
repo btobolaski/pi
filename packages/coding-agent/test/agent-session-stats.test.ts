@@ -30,6 +30,7 @@ function createUsage(totalTokens: number): Usage {
 			cacheRead: 0,
 			cacheWrite: 0,
 			total: 0,
+			source: "pi" as const,
 		},
 	};
 }
@@ -173,7 +174,7 @@ describe("AgentSession.getSessionStats", () => {
 				cacheRead: 30,
 				cacheWrite: 40,
 				totalTokens: 100,
-				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
+				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1, source: "pi" as const },
 			});
 			syncAgentMessages(session, sessionManager);
 
@@ -196,7 +197,7 @@ describe("AgentSession.getSessionStats", () => {
 				cacheRead: 30,
 				cacheWrite: 40,
 				totalTokens: 100,
-				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
+				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1, source: "pi" as const },
 			});
 			syncAgentMessages(session, sessionManager);
 
@@ -222,7 +223,7 @@ describe("AgentSession.getSessionStats", () => {
 					cacheRead: 97,
 					cacheWrite: 0,
 					totalTokens: 100,
-					cost: { input: 0.001, output: 0.002, cacheRead: 0.007, cacheWrite: 0, total: 0.01 },
+					cost: { input: 0.001, output: 0.002, cacheRead: 0.007, cacheWrite: 0, total: 0.01, source: "pi" },
 				},
 				"extension override",
 			);
@@ -252,7 +253,7 @@ describe("AgentSession.getSessionStats", () => {
 					cacheRead: 30,
 					cacheWrite: 40,
 					totalTokens: 100,
-					cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
+					cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1, source: "pi" as const },
 				}),
 			);
 			syncAgentMessages(session, sessionManager);

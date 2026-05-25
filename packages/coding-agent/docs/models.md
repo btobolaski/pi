@@ -100,6 +100,14 @@ Choose the conservative end of any published range. A model without a lifetime f
 
 Compatibility settings should describe verified differences in the endpoint's request or response behavior. Do not enable them based only on an endpoint advertising OpenAI or Anthropic compatibility.
 
+For Z.ai-compatible Chat Completions endpoints, set `compat.zaiToolStream` to `true` on a provider or model to send `tool_stream: true` when the request declares tools. It defaults to `false`; enable it only if the endpoint supports this field.
+
+### OpenRouter billed cost
+
+OpenRouter's streamed `usage.cost` supplies `usage.cost.total` with `source: "provider"`. Without it, Pi uses catalog pricing with `source: "pi"`.
+
+For OpenRouter Chat Completions models (`openai-completions`), set `compat.openRouterReconcileCostFromGenerationEndpoint` to `true` on the provider or model to reconcile the final total through OpenRouter's `/api/v1/generation` endpoint. It defaults to `false`; failed lookups keep the existing cost and add an `openrouter_cost_reconcile_failed` diagnostic.
+
 ## Use classifier models
 
 Classifier models do not chat. They answer typed questions about JSON state: pick one of several choices, answer yes or no, or give a score, each with probabilities. Pi includes TypeSafe's Jev model from these providers, and Cloudflare's Clef and Clef Flash models from Workers AI:
