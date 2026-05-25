@@ -185,7 +185,7 @@ Unknown frontmatter fields are ignored.
 
 **Exception:** Skills with missing description are not loaded.
 
-Name collisions (same name from different locations) warn and keep the first skill found.
+Name collisions (same name from different locations) warn and keep the highest-precedence skill. Precedence is: project local/settings paths, then project auto-discovered skills, then user local/settings paths, then user auto-discovered skills, then package-provided skills.
 
 ## Example
 
