@@ -62,7 +62,7 @@ vi.mock("@aws-sdk/client-bedrock-runtime", () => {
 });
 
 import { stream as streamBedrock } from "../src/api/bedrock-converse-stream.ts";
-import type { Context, Message, Model, ThinkingContent } from "../src/types.ts";
+import type { Context, Message, Model, ThinkingContent, Usage } from "../src/types.ts";
 
 const gptModel: Model<"bedrock-converse-stream"> = {
 	id: "global.openai.gpt-5.6-terra",
@@ -77,13 +77,13 @@ const gptModel: Model<"bedrock-converse-stream"> = {
 	maxTokens: 128000,
 };
 
-const emptyUsage = {
+const emptyUsage: Usage = {
 	input: 0,
 	output: 0,
 	cacheRead: 0,
 	cacheWrite: 0,
 	totalTokens: 0,
-	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 };
 
 /** Mirrors the ConverseStream frames GPT-5.6 emits: encrypted reasoning, then text. */

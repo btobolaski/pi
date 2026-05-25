@@ -77,7 +77,7 @@ const mixedAppendTransaction: Write[] = [
 			cacheRead: 500,
 			cacheWrite: 0,
 			totalTokens: 1_250,
-			cost: { input: 0.001, output: 0.001, cacheRead: 0.0001, cacheWrite: 0, total: 0.0021 },
+			cost: { input: 0.001, output: 0.001, cacheRead: 0.0001, cacheWrite: 0, total: 0.0021, source: "pi" },
 		},
 	}),
 ];

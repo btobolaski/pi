@@ -77,7 +77,7 @@ describe("SessionManager append and tree traversal", () => {
 				cacheRead: 30,
 				cacheWrite: 40,
 				totalTokens: 100,
-				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
+				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1, source: "pi" as const },
 			};
 			const compactionId = session.appendCompaction("summary", id1, 1000, undefined, false, usage);
 			const _id3 = session.appendMessage(userMsg("3"));
@@ -334,7 +334,7 @@ describe("SessionManager append and tree traversal", () => {
 				cacheRead: 30,
 				cacheWrite: 40,
 				totalTokens: 100,
-				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
+				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1, source: "pi" as const },
 			};
 			const summaryId = session.branchWithSummary(id1, "Summary of abandoned work", undefined, false, usage);
 
@@ -538,7 +538,7 @@ describe("createBranchedSession", () => {
 				cacheRead: 30,
 				cacheWrite: 40,
 				totalTokens: 100,
-				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
+				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1, source: "pi" as const },
 			};
 			session.appendMessage({
 				role: "toolResult",

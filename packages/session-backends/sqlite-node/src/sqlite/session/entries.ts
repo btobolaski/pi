@@ -1,11 +1,12 @@
-import type {
-	BranchSummaryEntry,
-	CompactionEntry,
-	CustomEntry,
-	Entry,
-	EntryScan,
-	EntryStructure,
-	MessageEntry,
+import {
+	type BranchSummaryEntry,
+	type CompactionEntry,
+	type CustomEntry,
+	type Entry,
+	type EntryScan,
+	type EntryStructure,
+	type MessageEntry,
+	normalizeEntryUsage,
 } from "@earendil-works/pi-agent-core";
 import { joinSqlFragments, type SqlQuery, sql } from "../sql.ts";
 import type { SqliteDatabase, SqliteStatement } from "../types.ts";
@@ -63,7 +64,11 @@ function entryPayload(entry: Entry): StoredEntryPayload<Entry> {
 }
 
 function parsePayload<TEntry extends Entry>(row: EntryRow): StoredEntryPayload<TEntry> {
-	return JSON.parse(row.payload) as StoredEntryPayload<TEntry>;
+	try {
+		return JSON.parse(row.payload) as StoredEntryPayload<TEntry>;
+	} catch (error) {
+		throw new Error(`Invalid payload for entry ${row.id}`, { cause: error });
+	}
 }
 
 const INSERT_ENTRY_SQL = `INSERT INTO entries (session_id, id, parent_id, seq, type, custom_type, timestamp, payload)
@@ -109,11 +114,11 @@ export function decodeEntryRow(row: EntryRow): Entry {
 	};
 	switch (row.type) {
 		case "message":
-			return { ...base, type: "message", ...parsePayload<MessageEntry>(row) };
+			return normalizeEntryUsage({ ...base, type: "message", ...parsePayload<MessageEntry>(row) });
 		case "compaction":
-			return { ...base, type: "compaction", ...parsePayload<CompactionEntry>(row) };
+			return normalizeEntryUsage({ ...base, type: "compaction", ...parsePayload<CompactionEntry>(row) });
 		case "branch_summary":
-			return { ...base, type: "branch_summary", ...parsePayload<BranchSummaryEntry>(row) };
+			return normalizeEntryUsage({ ...base, type: "branch_summary", ...parsePayload<BranchSummaryEntry>(row) });
 		case "custom":
 			if (row.custom_type === null) throw new Error(`Custom entry ${row.id} is missing custom_type`);
 			return { ...base, type: "custom", customType: row.custom_type, ...parsePayload<CustomEntry>(row) };

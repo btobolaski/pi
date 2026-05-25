@@ -1,38 +1,17 @@
-import type { SessionStats, UsageRow } from "@earendil-works/pi-agent-core";
-import type { Usage } from "@earendil-works/pi-ai";
+import { addUsage, normalizeUsageCostSource, type SessionStats, type UsageRow } from "@earendil-works/pi-agent-core";
 import { sql } from "../sql.ts";
 import type { SqliteDatabase } from "../types.ts";
 import { readSessionRow } from "./session-row.ts";
 
-function addUsage(left: Usage, right: Usage): Usage {
-	return {
-		input: left.input + right.input,
-		output: left.output + right.output,
-		cacheRead: left.cacheRead + right.cacheRead,
-		cacheWrite: left.cacheWrite + right.cacheWrite,
-		...(left.cacheWrite1h === undefined && right.cacheWrite1h === undefined
-			? {}
-			: { cacheWrite1h: (left.cacheWrite1h ?? 0) + (right.cacheWrite1h ?? 0) }),
-		...(left.reasoning === undefined && right.reasoning === undefined
-			? {}
-			: { reasoning: (left.reasoning ?? 0) + (right.reasoning ?? 0) }),
-		totalTokens: left.totalTokens + right.totalTokens,
-		cost: {
-			input: left.cost.input + right.cost.input,
-			output: left.cost.output + right.cost.output,
-			cacheRead: left.cost.cacheRead + right.cost.cacheRead,
-			cacheWrite: left.cost.cacheWrite + right.cost.cacheWrite,
-			total: left.cost.total + right.cost.total,
-		},
-	};
-}
-
 export function readSessionStats(db: SqliteDatabase, sessionId: string): SessionStats {
 	const row = readSessionRow(db, sessionId);
-	return {
-		messageCount: row.message_count,
-		usage: JSON.parse(row.usage_payload) as Usage,
-	};
+	let usage: UsageRow["usage"];
+	try {
+		usage = normalizeUsageCostSource(JSON.parse(row.usage_payload) as UsageRow["usage"]);
+	} catch (error) {
+		throw new Error(`Invalid usage payload for session ${sessionId}`, { cause: error });
+	}
+	return { messageCount: row.message_count, usage };
 }
 
 export function incrementMessageCount(db: SqliteDatabase, sessionId: string): void {

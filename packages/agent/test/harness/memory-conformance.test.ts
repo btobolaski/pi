@@ -46,7 +46,7 @@ describe("MemoryStorage commit statistics", () => {
 			cacheRead: 0,
 			cacheWrite: 0,
 			totalTokens: 3,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" as const },
 		};
 		try {
 			await session.mutate(
