@@ -25,13 +25,31 @@ export function isOpenRouterModel(model: { provider: string; baseUrl: string }):
 	return model.provider === "openrouter" || model.baseUrl.includes("openrouter.ai");
 }
 
-/** Replace the catalog total with OpenRouter's billed cost when the response contains complete, valid accounting. */
+/** Apply a billed total while preserving the catalog-derived proportions of the component costs. */
+export function applyOpenRouterCost(usage: Usage, totalCost: number): void {
+	if (!isValidCost(totalCost)) return;
+	if (usage.cost.total > 0) {
+		const scale = totalCost / usage.cost.total;
+		usage.cost.input *= scale;
+		usage.cost.output *= scale;
+		usage.cost.cacheRead *= scale;
+		usage.cost.cacheWrite *= scale;
+	} else {
+		usage.cost.input = totalCost;
+		usage.cost.output = 0;
+		usage.cost.cacheRead = 0;
+		usage.cost.cacheWrite = 0;
+	}
+	usage.cost.total = totalCost;
+	usage.cost.totalFromProvider = true;
+}
+
+/** Replace catalog costs with OpenRouter's billed cost when the response contains complete, valid accounting. */
 export function applyOpenRouterReportedCost(usage: Usage, reported: OpenRouterUsageAccounting): void {
 	if (!isValidCost(reported.cost)) return;
 
 	if (reported.is_byok === false) {
-		usage.cost.total = reported.cost;
-		usage.cost.totalFromProvider = true;
+		applyOpenRouterCost(usage, reported.cost);
 		return;
 	}
 
@@ -49,7 +67,6 @@ export function applyOpenRouterReportedCost(usage: Usage, reported: OpenRouterUs
 			upstreamCost = details.upstream_inference_prompt_cost + details.upstream_inference_completions_cost;
 		}
 		if (!isValidCost(upstreamCost)) return;
-		usage.cost.total = reported.cost + upstreamCost;
-		usage.cost.totalFromProvider = true;
+		applyOpenRouterCost(usage, reported.cost + upstreamCost);
 	}
 }

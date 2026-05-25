@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Usage } from "../src/types.ts";
-import { applyOpenRouterReportedCost, isOpenRouterModel } from "../src/utils/openrouter-cost.ts";
+import { applyOpenRouterCost, applyOpenRouterReportedCost, isOpenRouterModel } from "../src/utils/openrouter-cost.ts";
 
 function usage(total = 1): Usage {
 	return {
@@ -18,6 +18,51 @@ describe("isOpenRouterModel", () => {
 		expect(isOpenRouterModel({ provider: "openrouter", baseUrl: "https://example.com" })).toBe(true);
 		expect(isOpenRouterModel({ provider: "openrouter-work", baseUrl: "https://openrouter.ai/api/v1" })).toBe(true);
 		expect(isOpenRouterModel({ provider: "custom", baseUrl: "https://example.com/v1" })).toBe(false);
+	});
+});
+
+describe("applyOpenRouterCost", () => {
+	it("rescales every component, including a later reconciliation", () => {
+		const value = usage();
+		value.cost = { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 };
+		applyOpenRouterCost(value, 2);
+		expect(value.cost).toEqual({
+			input: 0.2,
+			output: 0.4,
+			cacheRead: 0.6,
+			cacheWrite: 0.8,
+			total: 2,
+			totalFromProvider: true,
+		});
+		applyOpenRouterCost(value, 0.5);
+		expect(value.cost).toEqual({
+			input: 0.05,
+			output: 0.1,
+			cacheRead: 0.15,
+			cacheWrite: 0.2,
+			total: 0.5,
+			totalFromProvider: true,
+		});
+	});
+
+	it("assigns the entire bill to input without a catalog estimate", () => {
+		const value = usage(0);
+		applyOpenRouterCost(value, 0.5);
+		expect(value.cost).toEqual({
+			input: 0.5,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			total: 0.5,
+			totalFromProvider: true,
+		});
+	});
+
+	it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])("ignores an invalid total %s", (total) => {
+		const value = usage();
+		const before = { ...value.cost };
+		applyOpenRouterCost(value, total);
+		expect(value.cost).toEqual(before);
 	});
 });
 

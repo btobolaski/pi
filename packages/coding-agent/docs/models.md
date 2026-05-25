@@ -139,6 +139,14 @@ Pi first clamps unsupported thinking levels, then merges model `samplingParams`,
 
 Compatibility settings should describe verified differences in the endpoint's request or response behavior. Do not enable them based only on an endpoint advertising OpenAI or Anthropic compatibility.
 
+For Z.ai-compatible Chat Completions endpoints, set `compat.zaiToolStream` to `true` on a provider or model to send `tool_stream: true` when the request declares tools. It defaults to `false`; enable it only if the endpoint supports this field.
+
+### OpenRouter billed cost
+
+OpenRouter's streamed billing supplies `usage.cost.total`, including upstream inference costs for BYOK requests, and sets `usage.cost.totalFromProvider` to `true`. Without valid billing, Pi uses catalog pricing. The input, output, cache-read, and cache-write costs retain their catalog-derived proportions but are scaled to sum to the billed total. If the catalog estimate is zero, the full total goes into input cost.
+
+For OpenRouter Chat Completions models (`openai-completions`), set `compat.openRouterReconcileCostFromGenerationEndpoint` to `true` on the provider or model to reconcile the final total through OpenRouter's `/api/v1/generation` endpoint. It defaults to `false`; failed lookups keep the existing cost and add an `openrouter_cost_reconcile_failed` diagnostic.
+
 ## Use classifier models
 
 Classifier models do not chat. They answer typed questions about JSON state: pick one of several choices, answer yes or no, or give a score, each with probabilities. Pi includes TypeSafe's Jev model from these providers, Cloudflare's Clef, Clef Flash, and Clef Omni models from Workers AI and OpenRouter, OpenAI's GPT-6 Luna through the [Decisions API](https://developers.openai.com/api/docs/guides/decisions), and Microsoft-Decision-1 through GitHub Copilot:
