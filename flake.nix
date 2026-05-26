@@ -8,27 +8,43 @@
   outputs = { self, nixpkgs }:
     let
       forAllSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
+      # npm ships platform-specific prebuilt binaries (e.g.
+      # @biomejs/cli-linux-x64/biome) whose ELF interpreter is hardcoded to
+      # /lib64/ld-linux-x86-64.so.2. NixOS has no such loader, so `npm run
+      # check` fails outside an FHS environment. On Linux we wrap the dev shell
+      # in buildFHSEnv, which provides a standard FHS layout (including the
+      # loader) so the unmodified npm binaries run as-is. macOS uses Mach-O
+      # binaries and needs no such wrapper, so it keeps a plain mkShell.
       mkShell = { system, withBun ? true }:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-        in
-        pkgs.mkShell {
-          name = "pi-monorepo";
-
-          buildInputs = [
+          lib = pkgs.lib;
+          shellPackages = [
             pkgs.nodejs_22
-          ] ++ pkgs.lib.optionals withBun [
+          ] ++ lib.optionals withBun [
             pkgs.bun
           ];
-
-          shellHook = ''
+          banner = ''
             echo "pi-monorepo dev shell"
             echo "  node: $(node --version)"
             echo "  npm:  $(npm --version)"
             ${if withBun then ''echo "  bun:  $(bun --version)"'' else ""}
             echo ""
           '';
-        };
+        in
+        if pkgs.stdenv.hostPlatform.isLinux then
+          (pkgs.buildFHSEnv {
+            name = "pi-monorepo";
+            targetPkgs = _: shellPackages;
+            profile = banner;
+            runScript = "bash";
+          }).env
+        else
+          pkgs.mkShell {
+            name = "pi-monorepo";
+            buildInputs = shellPackages;
+            shellHook = banner;
+          };
 
       mkCodingAgent = system:
         let
@@ -42,7 +58,7 @@
 
           src = ./.;
 
-          npmDepsHash = "sha256-X0qMLqAi5pgrtTw5+DfSPsgIEngUnHwGxqYE6PL8NJU=";
+          npmDepsHash = "sha256-XGvDNH+eilsgc0Z7ITqbitB/9RVc+WuDfCcr1pibNqk=";
 
           npmWorkspace = "packages/coding-agent";
 
@@ -91,9 +107,13 @@
           ''
           + lib.optionalString pkgs.stdenvNoCC.hostPlatform.isDarwin ''
             # Remove foreign Linux binaries that make audit-tmpdir try to inspect ELF
-            # RPATHs with patchelf
-            find "$nm/koffi/build/koffi" -mindepth 1 -maxdepth 1 -type d \
-              ! -name 'darwin_*' -exec rm -r {} +
+            # RPATHs with patchelf. Each path is guarded because the set of bundled
+            # binaries shifts as upstream deps change (e.g. koffi was removed, and
+            # @anthropic-ai/sandbox-runtime no longer ships vendored seccomp blobs).
+            if [ -d "$nm/koffi/build/koffi" ]; then
+              find "$nm/koffi/build/koffi" -mindepth 1 -maxdepth 1 -type d \
+                ! -name 'darwin_*' -exec rm -r {} +
+            fi
             rm -rf \
               "$nm/@anthropic-ai/sandbox-runtime/dist/vendor/seccomp" \
               "$nm/@anthropic-ai/sandbox-runtime/vendor/seccomp"
