@@ -47,8 +47,12 @@ const ZERO_USAGE = {
 	cacheRead: 0,
 	cacheWrite: 0,
 	totalTokens: 0,
-	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 };
+
+function usageWithSource(source: "provider" | "pi") {
+	return { ...ZERO_USAGE, cost: { ...ZERO_USAGE.cost, source } };
+}
 
 async function withStorage<T>(run: (storage: SqliteStorage, db: SqliteDatabase) => Promise<T>): Promise<T> {
 	const db = await createNodeSqliteFactory().open(":memory:");
@@ -307,6 +311,55 @@ describe("SqliteStorage", () => {
 		});
 	});
 
+	it("backfills missing cost provenance in decoded entries", async () => {
+		await withStorage(async (storage, db) => {
+			const usage = {
+				input: 1,
+				output: 2,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: 3,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			};
+			const assistant = {
+				role: "assistant",
+				content: [],
+				api: "openai-completions",
+				provider: "openrouter",
+				model: "model",
+				usage,
+				stopReason: "stop",
+				timestamp: 10,
+			};
+			const toolResult = {
+				role: "toolResult",
+				toolCallId: "call",
+				toolName: "tool",
+				content: [],
+				usage,
+				isError: false,
+				timestamp: 10,
+			};
+			sql`INSERT INTO entries (session_id, id, parent_id, seq, type, custom_type, timestamp, payload)
+				VALUES
+					(${SESSION_ID}, ${"assistant"}, ${null}, ${1}, ${"message"}, ${null}, ${10}, ${JSON.stringify({ message: assistant })}),
+					(${SESSION_ID}, ${"tool"}, ${"assistant"}, ${2}, ${"message"}, ${null}, ${10}, ${JSON.stringify({ message: toolResult })}),
+					(${SESSION_ID}, ${"branch"}, ${"tool"}, ${3}, ${"branch_summary"}, ${null}, ${10}, ${JSON.stringify({ fromId: "tool", summary: "summary", usage, fromHook: false })}),
+					(${SESSION_ID}, ${"compact"}, ${"branch"}, ${4}, ${"compaction"}, ${null}, ${10}, ${JSON.stringify({ summary: "summary", retainedTail: [assistant], tokensBefore: 3, usage, fromHook: false })})`.run(
+				db,
+			);
+
+			const entries = await storage.getEntries(["assistant", "tool", "branch", "compact"], BACKGROUND_CONTEXT);
+			expect(entries.get("assistant")).toMatchObject({ message: { usage: { cost: { source: "pi" } } } });
+			expect(entries.get("tool")).toMatchObject({ message: { usage: { cost: { source: "pi" } } } });
+			expect(entries.get("branch")).toMatchObject({ usage: { cost: { source: "pi" } } });
+			expect(entries.get("compact")).toMatchObject({
+				usage: { cost: { source: "pi" } },
+				retainedTail: [{ usage: { cost: { source: "pi" } } }],
+			});
+		});
+	});
+
 	it("scans decoded entries with filters and sequence bounds", async () => {
 		await withStorage(async (storage, db) => {
 			sql`INSERT INTO entries (session_id, id, parent_id, seq, type, custom_type, timestamp, payload)
@@ -505,7 +558,7 @@ describe("SqliteStorage", () => {
 
 	it("scans decoded usage rows with sequence bounds", async () => {
 		await withStorage(async (storage, db) => {
-			const usage = {
+			const legacyUsage = {
 				input: 1,
 				output: 2,
 				cacheRead: 3,
@@ -513,11 +566,12 @@ describe("SqliteStorage", () => {
 				totalTokens: 10,
 				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
 			};
+			const usage = { ...legacyUsage, cost: { ...legacyUsage.cost, source: "pi" as const } };
 			sql`INSERT INTO usage_ledger (session_id, id, seq, entry_id, adjustment, usage, details)
 				VALUES
-					(${SESSION_ID}, ${"u1"}, ${1}, ${"e1"}, ${0}, ${JSON.stringify(usage)}, ${null}),
-					(${SESSION_ID}, ${"u2"}, ${2}, ${null}, ${1}, ${JSON.stringify(usage)}, ${JSON.stringify({ reason: "adjust" })}),
-					(${SESSION_ID}, ${"u3"}, ${3}, ${"e3"}, ${0}, ${JSON.stringify(usage)}, ${null})`.run(db);
+					(${SESSION_ID}, ${"u1"}, ${1}, ${"e1"}, ${0}, ${JSON.stringify(legacyUsage)}, ${null}),
+					(${SESSION_ID}, ${"u2"}, ${2}, ${null}, ${1}, ${JSON.stringify(legacyUsage)}, ${JSON.stringify({ reason: "adjust" })}),
+					(${SESSION_ID}, ${"u3"}, ${3}, ${"e3"}, ${0}, ${JSON.stringify(legacyUsage)}, ${null})`.run(db);
 
 			expect(await storage.scanUsage({ fromSeq: 2, order: "asc", limit: 1 }, BACKGROUND_CONTEXT)).toEqual([
 				{ id: "u2", seq: 2, usage, adjustment: true, details: { reason: "adjust" } },
@@ -545,7 +599,7 @@ describe("SqliteStorage", () => {
 						cacheRead: 0,
 						cacheWrite: 0,
 						totalTokens: 3,
-						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 					},
 					adjustment: false,
 				}),
@@ -579,7 +633,7 @@ describe("SqliteStorage", () => {
 
 	it("gets maintained session stats", async () => {
 		await withStorage(async (storage, db) => {
-			const usage = {
+			const legacyUsage = {
 				input: 1,
 				output: 2,
 				cacheRead: 3,
@@ -587,9 +641,10 @@ describe("SqliteStorage", () => {
 				totalTokens: 10,
 				cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
 			};
+			const usage = { ...legacyUsage, cost: { ...legacyUsage.cost, source: "pi" as const } };
 			sql`INSERT INTO sessions
 				(id, created_at, parent_session_id, storage_version, metadata, message_count, usage_payload, next_seq)
-				VALUES (${SESSION_ID}, ${1}, ${null}, ${1}, ${null}, ${2}, ${JSON.stringify(usage)}, ${3})`.run(db);
+				VALUES (${SESSION_ID}, ${1}, ${null}, ${1}, ${null}, ${2}, ${JSON.stringify(legacyUsage)}, ${3})`.run(db);
 
 			expect(await storage.getStats(BACKGROUND_CONTEXT)).toEqual({ messageCount: 2, usage });
 			const next = await storage.commit(
@@ -597,6 +652,32 @@ describe("SqliteStorage", () => {
 				BACKGROUND_CONTEXT,
 			);
 			expect(next.stats).toEqual({ messageCount: 2, usage });
+		});
+	});
+
+	it.each([
+		["provider", "provider", "provider"],
+		["provider", "pi", "pi"],
+		["pi", "provider", "pi"],
+	] as const)("combines %s and %s usage sources as %s", async (firstSource, secondSource, expectedSource) => {
+		await withStorage(async (storage, db) => {
+			const initialUsage = usageWithSource(firstSource);
+			sql`INSERT INTO sessions
+				(id, created_at, parent_session_id, storage_version, metadata, message_count, usage_payload, next_seq)
+				VALUES (${SESSION_ID}, ${1}, ${null}, ${1}, ${null}, ${0}, ${JSON.stringify(initialUsage)}, ${1})`.run(db);
+
+			const result = await storage.commit(
+				[
+					sessionWrites.insertUsage({
+						id: "usage",
+						usage: usageWithSource(secondSource),
+						adjustment: false,
+					}),
+				],
+				BACKGROUND_CONTEXT,
+			);
+
+			expect(result.stats.usage.cost.source).toBe(expectedSource);
 		});
 	});
 
@@ -609,7 +690,7 @@ describe("SqliteStorage", () => {
 				cacheRead: 0,
 				cacheWrite: 0,
 				totalTokens: 3,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" as const },
 			};
 			await storage.commit(
 				[

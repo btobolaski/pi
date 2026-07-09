@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import { afterEach, describe, expect, it } from "vitest";
-import { CodemodeSandbox, type CodemodeTool } from "../src/index.ts";
+import { CodemodeSandbox, type CodemodeTool, MAX_STORE_TOTAL_CHARS, MAX_STORE_VALUE_CHARS } from "../src/index.ts";
 import { PRELUDE_SOURCE } from "../src/runtime/prelude-source.ts";
 
 const sandboxes: CodemodeSandbox[] = [];
@@ -382,14 +382,30 @@ describe("store and load", () => {
 				attempt(() => store(1, "x")),
 				attempt(() => load({})),
 				attempt(() => store("fn", () => 1)),
-				attempt(() => store("big", "x".repeat(300 * 1024))),
-				attempt(() => { for (let i = 0; i < 8; i++) store("k" + i, "x".repeat(200 * 1024)); }),
+				attempt(() => store("big", "x".repeat(${MAX_STORE_VALUE_CHARS}))),
+				attempt(() => { for (let i = 0; i < 8; i++) store("k" + i, "x".repeat(${MAX_STORE_TOTAL_CHARS / 8})); }),
 			];
 		`);
 		expect(result).toMatchObject({
 			ok: true,
 			value: ["TypeError", "TypeError", "TypeError", "RangeError", "RangeError"],
 		});
+	});
+
+	it("accepts writes at the 5 Mi value and 20 Mi total limits", async () => {
+		const sandbox = createSandbox();
+		const limit = 5 * 1024 * 1024;
+		const result = await sandbox.execute(`
+			const limit = ${limit};
+			for (const key of ["a", "b", "c"]) store(key, "x".repeat(limit - 2));
+			// JSON quotes and the four one-character keys count toward the total.
+			store("d", "x".repeat(limit - 6));
+			return [load("a").length, load("d").length];
+		`);
+		expect(result).toMatchObject({ ok: true, value: [limit - 2, limit - 6] });
+		if (!result.ok) return;
+		const reloaded = await sandbox.execute('return load("a").length', { store: result.storeWrites.set });
+		expect(reloaded).toMatchObject({ ok: true, value: limit - 2 });
 	});
 
 	it("reserves the store and load names", () => {

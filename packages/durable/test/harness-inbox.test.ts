@@ -737,7 +737,7 @@ describe("usage", () => {
 			cacheRead: 3,
 			cacheWrite: 4,
 			totalTokens: 10,
-			cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1 },
+			cost: { input: 0.1, output: 0.2, cacheRead: 0.3, cacheWrite: 0.4, total: 1, source: "pi" },
 		};
 		const gate = deferred();
 		gate.resolve();
@@ -782,7 +782,7 @@ describe("usage", () => {
 			cacheRead: 0,
 			cacheWrite: 0,
 			totalTokens: 5,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 		};
 		const gate = deferred();
 		gate.resolve();
@@ -817,7 +817,7 @@ describe("usage", () => {
 			cacheRead: 0,
 			cacheWrite: 0,
 			totalTokens: 2,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 		};
 		const names = ["constructor", "__proto__", "toString"];
 		for (const name of names) {

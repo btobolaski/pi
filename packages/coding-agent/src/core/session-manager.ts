@@ -1,4 +1,4 @@
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import { type AgentMessage, normalizeEntryUsage } from "@earendil-works/pi-agent-core";
 import {
 	type AssistantMessage,
 	getCurrentSystemMessage,
@@ -354,18 +354,10 @@ export function migrateSessionEntries(entries: FileEntry[]): void {
 /** Exported for compaction.test.ts */
 export function parseSessionEntries(content: string): FileEntry[] {
 	const entries: FileEntry[] = [];
-	const lines = content.trim().split("\n");
-
-	for (const line of lines) {
-		if (!line.trim()) continue;
-		try {
-			const entry = JSON.parse(line) as FileEntry;
-			entries.push(entry);
-		} catch {
-			// Skip malformed lines
-		}
+	for (const line of content.trim().split("\n")) {
+		const entry = parseSessionEntryLine(line);
+		if (entry) entries.push(entry);
 	}
-
 	return entries;
 }
 
@@ -616,7 +608,7 @@ class SessionHeaderScanLimitError extends Error {
 function parseSessionEntryLine(line: string): FileEntry | null {
 	if (!line.trim()) return null;
 	try {
-		return JSON.parse(line) as FileEntry;
+		return normalizeEntryUsage(JSON.parse(line) as FileEntry);
 	} catch {
 		// Skip malformed lines
 		return null;

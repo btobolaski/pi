@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     pi-ai-release = {
-      url = "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.85.1.tgz";
+      url = "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.99.2.tgz";
       flake = false;
     };
   };
@@ -88,7 +88,7 @@
             cp -r ${pi-ai-release}/dist/providers/data/. packages/ai/src/providers/data/
           '';
 
-          npmDepsHash = "sha256-jzlsZIQzfl1FCZZ5//dHFWwMfBZQ4nRD6KB4HHifPqE=";
+          npmDepsHash = "sha256-eKghIpCAKawZm0Uf2iG6y1fz21Z5jNnMiAFJ5Quj3GI=";
 
           npmWorkspace = "packages/coding-agent";
 
@@ -99,21 +99,12 @@
             pkgs.makeBinaryWrapper
           ];
 
-          # Build workspace dependencies in order, then the coding-agent.
-          # We invoke tsgo directly for workspace deps to skip pi-ai's
-          # network-dependent generate-models script; postPatch supplies its
-          # generated model data from the lockstep-versioned package input.
+          # The upstream offline build uses the current compiler and workspace
+          # order; postPatch supplies model data without calling model APIs.
           buildPhase = ''
             runHook preBuild
 
-            npx tsgo -p packages/telemetry/tsconfig.build.json
-            npx tsgo -p packages/ai/tsconfig.build.json
-            npx tsgo -p packages/tui/tsconfig.build.json
-            npx tsgo -p packages/chord/tsconfig.build.json
-            npx tsgo -p packages/agent/tsconfig.build.json
-            npx tsgo -p packages/protocol/tsconfig.build.json
-            npx tsgo -p packages/client/tsconfig.build.json
-            npm run build --workspace=packages/coding-agent
+            npm run build:offline
 
             runHook postBuild
           '';
@@ -127,6 +118,8 @@
             # Replace workspace deps needed at runtime with real copies
             for ws in @earendil-works/pi-telemetry:packages/telemetry \
                       @earendil-works/pi-ai:packages/ai \
+                      @earendil-works/pi-codemode:packages/codemode \
+                      @earendil-works/pi-mcp:packages/mcp \
                       @earendil-works/chord:packages/chord \
                       @earendil-works/pi-agent-core:packages/agent \
                       @earendil-works/pi-tui:packages/tui \

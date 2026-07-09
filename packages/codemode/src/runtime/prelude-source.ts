@@ -25,8 +25,8 @@
  * `bridge(kind, a, b, c)` with kind "call" or "global" (id, name, argsJson),
  * "output" ("text", text) or ("image", data, mimeType), or "done" (ok, valueJsonOrErrorJson, writesJson).
  */
-export const MAX_STORE_VALUE_CHARS = 256 * 1024;
-export const MAX_STORE_TOTAL_CHARS = 1024 * 1024;
+export const MAX_STORE_VALUE_CHARS = 5 * 1024 * 1024;
+export const MAX_STORE_TOTAL_CHARS = 20 * 1024 * 1024;
 
 const IMAGE_HELPER_EXPECTS =
 	"image expects a non-empty image URL string, an object with image_url, or a raw MCP image block";
