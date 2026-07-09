@@ -6,6 +6,8 @@ interface ProviderRetryOptions {
 	signal?: AbortSignal;
 	/** HTTP statuses that fail at once although the default policy would retry them. */
 	noRetryStatuses?: readonly number[];
+	/** Additional retryable statuses; explicit provider and noRetryStatuses vetoes still apply. */
+	additionalRetryStatuses?: readonly number[];
 }
 
 interface ProviderError extends Error {
@@ -22,7 +24,7 @@ function isProviderError(error: unknown): error is ProviderError {
 }
 
 /** Mirrors the pinned OpenAI/Anthropic SDK retry policy; review when either SDK is upgraded. */
-function isRetryableProviderError(error: ProviderError): boolean {
+function isRetryableProviderError(error: ProviderError, additionalRetryStatuses?: readonly number[]): boolean {
 	const shouldRetry = error.headers?.get("x-should-retry");
 	if (shouldRetry === "true") return true;
 	if (shouldRetry === "false") return false;
@@ -32,7 +34,8 @@ function isRetryableProviderError(error: ProviderError): boolean {
 		error.status === 408 ||
 		error.status === 409 ||
 		error.status === 429 ||
-		(typeof error.status === "number" && error.status >= 500)
+		(typeof error.status === "number" && error.status >= 500) ||
+		additionalRetryStatuses?.includes(error.status) === true
 	);
 }
 
@@ -117,7 +120,12 @@ export async function retryProviderRequest<T>(
 			return await request();
 		} catch (error) {
 			if (options.signal?.aborted) throw createAbortError();
-			if (retriesRemaining <= 0 || !isProviderError(error) || !isRetryableProviderError(error)) throw error;
+			if (
+				retriesRemaining <= 0 ||
+				!isProviderError(error) ||
+				!isRetryableProviderError(error, options.additionalRetryStatuses)
+			)
+				throw error;
 			if (error.status !== undefined && options.noRetryStatuses?.includes(error.status)) throw error;
 
 			const retryIndex = maxRetries - retriesRemaining;

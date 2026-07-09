@@ -118,7 +118,7 @@ describe("openai-completions provider stream events", () => {
 		);
 
 		expect(message.usage.cost).toEqual({
-			input: 0,
+			input: 0.004,
 			output: 0,
 			cacheRead: 0,
 			cacheWrite: 0,
@@ -149,6 +149,7 @@ describe("openai-completions provider stream events", () => {
 			{ apiKey: "test" },
 		);
 
+		expect(message.usage.cost.input).toBeCloseTo(0.0032, 10);
 		expect(message.usage.cost.total).toBeCloseTo(0.0032, 10);
 		expect(message.usage.cost.totalFromProvider).toBe(true);
 	});
