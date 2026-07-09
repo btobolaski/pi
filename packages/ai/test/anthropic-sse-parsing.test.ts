@@ -140,7 +140,7 @@ describe("Anthropic raw SSE parsing", () => {
 	});
 
 	// Regression test for #9980.
-	it("uses the total reported by OpenRouter's Anthropic Messages endpoint", async () => {
+	it.each([false, true])("scales component costs for OpenRouter Anthropic Messages (BYOK: %s)", async (isByok) => {
 		const events = minimalAnthropicEvents.map((event) => ({ ...event }));
 		const delta = JSON.parse(events[4].data) as {
 			usage: Record<string, unknown>;
@@ -150,7 +150,7 @@ describe("Anthropic raw SSE parsing", () => {
 		delta.usage = {
 			...delta.usage,
 			cost: 0.004,
-			is_byok: false,
+			is_byok: isByok,
 			cost_details: { upstream_inference_cost: 0.003 },
 		};
 		events[4].data = JSON.stringify(delta);
@@ -158,6 +158,7 @@ describe("Anthropic raw SSE parsing", () => {
 		const model = {
 			...getModel("openrouter", "anthropic/claude-haiku-4.5"),
 			provider: "openrouter-work",
+			cost: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0 },
 		};
 		const result = await streamAnthropic(
 			model,
@@ -165,14 +166,17 @@ describe("Anthropic raw SSE parsing", () => {
 			{ client: createFakeAnthropicClient(createSseResponse(events)) },
 		).result();
 
-		expect(result.usage.cost.total).toBe(0.004);
+		const total = isByok ? 0.007 : 0.004;
+		expect(result.usage.cost.total).toBe(total);
+		expect(result.usage.cost.input).toBeCloseTo(total * (12 / 22), 10);
+		expect(result.usage.cost.output).toBeCloseTo(total * (10 / 22), 10);
 		expect(result.usage.cost.totalFromProvider).toBe(true);
 		expect(
 			result.usage.cost.input +
 				result.usage.cost.output +
 				result.usage.cost.cacheRead +
 				result.usage.cost.cacheWrite,
-		).not.toBe(result.usage.cost.total);
+		).toBeCloseTo(result.usage.cost.total, 10);
 	});
 
 	it("keeps signed thinking replayable when a proxy relabels the model", async () => {

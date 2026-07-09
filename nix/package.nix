@@ -63,6 +63,7 @@ let
 
       mkdir -p "$out"
       pack_package packages/telemetry telemetry
+      pack_package packages/schema schema
       pack_package packages/ai ai
       pack_package packages/tui tui
       pack_package packages/agent agent
@@ -84,6 +85,7 @@ let
       "node_modules/@earendil-works/pi-codemode" = workspacePackages + "/codemode.tgz";
       "node_modules/@earendil-works/pi-coding-agent" = workspacePackages + "/coding-agent.tgz";
       "node_modules/@earendil-works/pi-mcp" = workspacePackages + "/mcp.tgz";
+      "node_modules/@earendil-works/pi-schema" = workspacePackages + "/schema.tgz";
       "node_modules/@earendil-works/pi-telemetry" = workspacePackages + "/telemetry.tgz";
       "node_modules/@earendil-works/pi-tui" = workspacePackages + "/tui.tgz";
     };
@@ -104,7 +106,10 @@ stdenv.mkDerivation {
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
 
-  buildInputs = [ nodejs ] ++ lib.optionals stdenv.hostPlatform.isLinux [
+  buildInputs = [
+    nodejs
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
     stdenv.cc.cc.lib
     libxcb
   ];
@@ -117,6 +122,8 @@ stdenv.mkDerivation {
 
     mkdir -p "$out/lib/pi" "$out/bin"
     cp -R . "$out/lib/pi"
+    # npm's hidden lockfile retains build-only archives in the runtime closure.
+    rm -f "$out/lib/pi/node_modules/.package-lock.json"
 
     # The wrapper runs Pi with an absolute Node path. Node is only on PATH so Pi can
     # find npm for package installs; append it so that shells started by the

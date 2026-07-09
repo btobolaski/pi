@@ -470,14 +470,15 @@ export interface Usage {
 	 */
 	reasoning?: number;
 	totalTokens: number;
+	/** Catalog-derived components, proportionally scaled to billed totals for OpenRouter chat responses. */
 	cost: {
-		/** Catalog-derived input cost. */
+		/** Input cost; receives the full OpenRouter billed amount when the catalog estimate is zero. */
 		input: number;
-		/** Catalog-derived output cost. */
+		/** Output cost. */
 		output: number;
-		/** Catalog-derived cache-read cost. */
+		/** Cache-read cost. */
 		cacheRead: number;
-		/** Catalog-derived cache-write cost. */
+		/** Cache-write cost. */
 		cacheWrite: number;
 		/** Best available total: provider-reported billed cost when supported, otherwise the catalog estimate. */
 		total: number;

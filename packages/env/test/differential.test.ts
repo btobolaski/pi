@@ -5,7 +5,13 @@ import { join } from "node:path";
 import type { Context } from "@earendil-works/chord";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import type { ToolExecutionApi } from "@earendil-works/pi-durable";
-import type { ExecutionEnv, FileError, Result } from "@earendil-works/pi-durable/env";
+import {
+	type ExecutionEnv,
+	type FileError,
+	type FileInfo,
+	getOrThrow,
+	type Result,
+} from "@earendil-works/pi-durable/env";
 import { NodeExecutionEnv } from "@earendil-works/pi-durable/env/node";
 import { createBashTool, createReadTool } from "@earendil-works/pi-durable/tools";
 import { afterAll, describe, expect, it } from "vitest";
@@ -290,17 +296,22 @@ describe("RemoteExecutionEnv against NodeExecutionEnv", () => {
 				}
 			}
 			const results = async (env: ExecutionEnv, root: string) => {
-				const reader = await env.openDirReader(".", context);
-				const pages: unknown[] = [];
-				if (reader.ok) {
+				const reader = getOrThrow(await env.openDirReader(".", context));
+				const entries: FileInfo[] = [];
+				try {
 					for (let done = false; !done; ) {
-						const page = await reader.value.next(2, context);
-						pages.push(page);
-						done = !page.ok || page.value.done;
+						const page = getOrThrow(await reader.next(2, context));
+						expect(page.entries.length).toBeLessThanOrEqual(2);
+						entries.push(...page.entries);
+						done = page.done;
 					}
-					await reader.value.close(context);
+				} finally {
+					await reader.close(context);
 				}
-				return normalize({ list: await env.listDir(".", context), pages }, root);
+				expect(entries.map((entry) => entry.name).sort()).toEqual(["b", "z", "é"]);
+				// Directory readers return filesystem order, which can differ between the two roots.
+				entries.sort((a, b) => a.name.localeCompare(b.name));
+				return normalize({ list: await env.listDir(".", context), entries }, root);
 			};
 			expect(await results(remote, roots[1])).toEqual(await results(local, roots[0]));
 		},

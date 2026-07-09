@@ -89,6 +89,8 @@ See [Sessions and Context](sessions.md) for resuming, forking, naming, and stori
   Opens the session selector and resumes the chosen session in its working directory. Press Tab to include sessions from other directories.
 - `--session <path|id>`<br>
   Opens a session by file path or full/partial ID, and resumes it in its working directory. If the ID only matches sessions stored for another directory, Pi offers to fork it into the current directory instead.
+- `--cwd`<br>
+  Runs a resumed session in the launch directory instead of its stored directory, without forking. Applies only at startup, not to `/resume`.
 - `--session-id <id>`<br>
   Opens the current directory's existing session with the ID, or creates it otherwise. IDs accept letters, numbers, `.`, `_`, and `-`.
 - `--fork <path|id>`<br>
