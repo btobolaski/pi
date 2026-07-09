@@ -34,7 +34,7 @@ function doneMessage(model: Model<Api>, text: string): AssistantMessage {
 			cacheRead: 0,
 			cacheWrite: 0,
 			totalTokens: 0,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 		},
 		stopReason: "stop",
 		timestamp: Date.now(),
@@ -146,7 +146,7 @@ describe("Models runtime", () => {
 			cacheRead: 72000,
 			cacheWrite,
 			totalTokens: 372000 + cacheWrite,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" as const },
 		});
 
 		const short = calculateCost(model, createUsage(0));

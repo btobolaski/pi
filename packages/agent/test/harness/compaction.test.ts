@@ -45,14 +45,20 @@ function createId(): string {
 	return `entry-${nextId++}`;
 }
 
-function createMockUsage(input: number, output: number, cacheRead = 0, cacheWrite = 0): Usage {
+function createMockUsage(
+	input: number,
+	output: number,
+	cacheRead = 0,
+	cacheWrite = 0,
+	source: Usage["cost"]["source"] = "pi",
+): Usage {
 	return {
 		input,
 		output,
 		cacheRead,
 		cacheWrite,
 		totalTokens: input + output + cacheRead + cacheWrite,
-		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source },
 	};
 }
 
@@ -598,12 +604,6 @@ describe("harness compaction", () => {
 	it("combines usage for split-turn compaction summaries", async () => {
 		const messages: AgentMessage[] = [createUserMessage("Summarize this.")];
 		const { model } = createFauxModel(false);
-		const historyUsage = createMockUsage(1, 2, 3, 4);
-		const turnPrefixUsage = createMockUsage(5, 6, 7, 8);
-		const usageModels = createModelsWithSimpleResponses([
-			{ ...fauxAssistantMessage("history summary"), usage: historyUsage },
-			{ ...fauxAssistantMessage("turn prefix summary"), usage: turnPrefixUsage },
-		]);
 		const preparation: CompactionPreparation = {
 			messagesToSummarize: messages,
 			turnPrefixMessages: messages,
@@ -613,10 +613,28 @@ describe("harness compaction", () => {
 			fileOps: { read: new Set(), written: new Set(), edited: new Set() },
 			settings: { enabled: true, reserveTokens: 2000, keepRecentTokens: 20 },
 		};
+		const sourceScenarios = [
+			["provider", "provider", "provider"],
+			["provider", "pi", "pi"],
+			["pi", "provider", "pi"],
+		] as const;
 
-		const result = getOrThrow(await compact(preparation, usageModels, model));
+		for (const [historySource, turnPrefixSource, expectedSource] of sourceScenarios) {
+			const usageModels = createModelsWithSimpleResponses([
+				{
+					...fauxAssistantMessage("history summary"),
+					usage: createMockUsage(1, 2, 3, 4, historySource),
+				},
+				{
+					...fauxAssistantMessage("turn prefix summary"),
+					usage: createMockUsage(5, 6, 7, 8, turnPrefixSource),
+				},
+			]);
 
-		expect(result.usage).toEqual(createMockUsage(6, 8, 10, 12));
+			const result = getOrThrow(await compact(preparation, usageModels, model));
+
+			expect(result.usage).toEqual(createMockUsage(6, 8, 10, 12, expectedSource));
+		}
 	});
 
 	it("passes reasoning through turn-prefix summaries when enabled", async () => {

@@ -13,6 +13,7 @@ pi --no-session        # Ephemeral mode; do not save
 pi --name "my task"    # Set session display name at startup
 pi --session <path|id> # Use a specific session file or partial session ID
 pi --fork <path|id>    # Fork a session file or partial session ID into a new session
+pi -r --cwd            # Resume a session in the current directory, not its stored one
 ```
 
 Use `/session` in interactive mode to see the current session file, session ID, message count, tokens, and cost.
@@ -48,6 +49,19 @@ In the picker you can:
 - delete with Ctrl+D, then confirm
 
 When available, pi uses the `trash` CLI for deletion instead of permanently removing files.
+
+### Resuming in the Current Directory
+
+Each session records the working directory it was created in, and resuming it normally returns to that directory. Pass `--cwd` to run the resumed session where pi was started instead:
+
+```bash
+pi -r --cwd                    # picker, then resume in the current directory
+pi --session <path|id> --cwd   # same for a specific session
+```
+
+This suits Git worktrees that share session storage: symlink the worktrees' session directories together, then resume any session from whichever worktree is free. The session keeps appending to its original file; only the directory it runs in changes. `--cwd` also skips the fork prompt for a session found in another project, opening it in place instead.
+
+The flag applies to the resume that pi starts with. `/resume` inside a running session still switches to the directory stored in the session you select.
 
 ## Naming Sessions
 

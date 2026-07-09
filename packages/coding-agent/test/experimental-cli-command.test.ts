@@ -156,10 +156,13 @@ describe("experimental CLI commands", () => {
 		});
 	});
 
-	test("treats command names after the first argument as existing CLI arguments", () => {
+	test("treats values after existing boolean flags as existing CLI arguments", () => {
 		expect(experimentalCli.parse(["--cwd", "/workspace", "server"])).toMatchObject({
 			ok: true,
-			command: { command: "pi", options: { messages: ["server"] } },
+			command: {
+				command: "pi",
+				options: { useLaunchCwd: true, messages: ["/workspace", "server"] },
+			},
 		});
 	});
 });

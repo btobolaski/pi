@@ -426,7 +426,14 @@ END;
 				cacheRead: 40,
 				cacheWrite: 10,
 				totalTokens: 175,
-				cost: { input: 0.1, output: 0.2, cacheRead: 0.03, cacheWrite: 0.04, total: 0.37 },
+				cost: {
+					input: 0.1,
+					output: 0.2,
+					cacheRead: 0.03,
+					cacheWrite: 0.04,
+					total: 0.37,
+					source: "pi" as const,
+				},
 			},
 		};
 		const assistantId = await session.appendMessage(assistant);
@@ -447,7 +454,14 @@ END;
 			cacheRead: 3,
 			cacheWrite: 4,
 			totalTokens: 10,
-			cost: { input: 0.01, output: 0.02, cacheRead: 0.03, cacheWrite: 0.04, total: 0.1 },
+			cost: {
+				input: 0.01,
+				output: 0.02,
+				cacheRead: 0.03,
+				cacheWrite: 0.04,
+				total: 0.1,
+				source: "pi" as const,
+			},
 		};
 		const compactionId = await appendSqliteCompaction(session, "summary", 200, undefined, compactionUsage);
 		await session.appendRecord({
@@ -467,7 +481,14 @@ END;
 			cacheRead: 7,
 			cacheWrite: 8,
 			totalTokens: 26,
-			cost: { input: 0.05, output: 0.06, cacheRead: 0.07, cacheWrite: 0.08, total: 0.26 },
+			cost: {
+				input: 0.05,
+				output: 0.06,
+				cacheRead: 0.07,
+				cacheWrite: 0.08,
+				total: 0.26,
+				source: "pi" as const,
+			},
 		};
 		const branchSummaryId = await moveSqliteMainLane(session, userId, {
 			summary: "branch summary",

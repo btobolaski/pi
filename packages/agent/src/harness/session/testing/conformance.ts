@@ -32,7 +32,7 @@ function createAssistantMessage(text: string): AgentMessage {
 			cacheRead: 0,
 			cacheWrite: 0,
 			totalTokens: 0,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 		},
 		stopReason: "stop",
 		timestamp: 1,
@@ -562,7 +562,7 @@ export function createSessionBackendConformance(
 					cacheRead: 3,
 					cacheWrite: 2,
 					totalTokens: 20,
-					cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4, total: 10 },
+					cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4, total: 10, source: "pi" },
 				};
 				await session.appendEntry<MessageEntry>(
 					{ type: "message", id: "user", message: createUserMessage("question") },
@@ -595,7 +595,7 @@ export function createSessionBackendConformance(
 						cacheRead: 0,
 						cacheWrite: 0,
 						totalTokens: 0,
-						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 					},
 				});
 				await session.createLane("thread", "assistant");
@@ -611,7 +611,7 @@ export function createSessionBackendConformance(
 						cacheRead: 0,
 						cacheWrite: 0,
 						totalTokens: -2,
-						cost: { input: -0.5, output: 0, cacheRead: 0, cacheWrite: 0, total: -0.5 },
+						cost: { input: -0.5, output: 0, cacheRead: 0, cacheWrite: 0, total: -0.5, source: "pi" },
 					},
 				});
 				await session.setName("First");
@@ -914,7 +914,7 @@ export function createSessionBackendConformance(
 						cacheRead: 3,
 						cacheWrite: 2,
 						totalTokens: 20,
-						cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4, total: 10 },
+						cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4, total: 10, source: "pi" },
 					},
 				});
 
