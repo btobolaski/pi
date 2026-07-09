@@ -1,4 +1,4 @@
-import { addUsage, emptyUsage } from "../utils/usage.ts";
+import { addUsage, emptyUsage, normalizeEntryUsage, normalizeUsageCostSource } from "../utils/usage.ts";
 import { type CommittedWrite, type PreparedCommit, prepareStorageCommit, validateCommittedWrites } from "./commit.ts";
 
 export type {
@@ -96,14 +96,16 @@ export class InMemoryStorageState {
 		for (const write of writes) {
 			switch (write.kind) {
 				case "entry": {
-					const { kind: _kind, ...entry } = write;
+					const { kind: _kind, ...storedEntry } = write;
+					const entry = normalizeEntryUsage(storedEntry);
 					this.entries.set(entry.id, entry);
 					this.entriesBySeq.push(entry);
 					if (entry.type === "message") this.stats = { ...this.stats, messageCount: this.stats.messageCount + 1 };
 					break;
 				}
 				case "usage": {
-					const { kind: _kind, ...row } = write;
+					const { kind: _kind, ...storedRow } = write;
+					const row = { ...storedRow, usage: normalizeUsageCostSource(storedRow.usage) };
 					this.usage.set(row.id, row);
 					this.stats = { ...this.stats, usage: addUsage(this.stats.usage, row.usage) };
 					break;

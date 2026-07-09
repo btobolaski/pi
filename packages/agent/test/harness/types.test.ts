@@ -269,7 +269,7 @@ const usage = {
 	cacheRead: 3,
 	cacheWrite: 4,
 	totalTokens: 10,
-	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 } satisfies Usage;
 const usageRow = {
 	id: "usage",

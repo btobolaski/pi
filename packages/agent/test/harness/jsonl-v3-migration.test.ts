@@ -177,13 +177,7 @@ describe("JSONL v3 migration", () => {
 			cacheRead: 2,
 			cacheWrite: 1,
 			totalTokens: 18,
-			cost: {
-				input: 0.1,
-				output: 0.05,
-				cacheRead: 0.02,
-				cacheWrite: 0.01,
-				total: 0.18,
-			},
+			cost: { input: 0.1, output: 0.05, cacheRead: 0.02, cacheWrite: 0.01, total: 0.18, source: "pi" },
 		} satisfies Usage;
 		const secondMessage = {
 			role: "assistant",
@@ -267,7 +261,7 @@ describe("JSONL v3 migration", () => {
 					cacheRead: 0,
 					cacheWrite: 0,
 					totalTokens: 0,
-					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 				},
 			});
 			return entries;
@@ -350,6 +344,7 @@ describe("JSONL v3 migration", () => {
 				cacheRead: factor * 3,
 				cacheWrite: factor * 4,
 				total: factor * 10,
+				source: "pi",
 			},
 		});
 		const assistantUsage = usage(1);
@@ -427,13 +422,7 @@ describe("JSONL v3 migration", () => {
 			cacheRead: 2,
 			cacheWrite: 1,
 			totalTokens: 18,
-			cost: {
-				input: 0.1,
-				output: 0.05,
-				cacheRead: 0.02,
-				cacheWrite: 0.01,
-				total: 0.18,
-			},
+			cost: { input: 0.1, output: 0.05, cacheRead: 0.02, cacheWrite: 0.01, total: 0.18, source: "pi" },
 		} satisfies Usage;
 		const importedMessage = {
 			role: "assistant",
@@ -476,7 +465,7 @@ describe("JSONL v3 migration", () => {
 					cacheRead: 0,
 					cacheWrite: 0,
 					totalTokens: 0,
-					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 				},
 				adjustment: true,
 				details: { source: "v3-import" },
@@ -1366,13 +1355,7 @@ describe("JSONL v3 migration", () => {
 			cacheRead: 3,
 			cacheWrite: 2,
 			totalTokens: 23,
-			cost: {
-				input: 0.11,
-				output: 0.07,
-				cacheRead: 0.03,
-				cacheWrite: 0.02,
-				total: 0.23,
-			},
+			cost: { input: 0.11, output: 0.07, cacheRead: 0.03, cacheWrite: 0.02, total: 0.23, source: "pi" },
 		} satisfies Usage;
 		const branchPointMessage = {
 			role: "user",
@@ -1391,13 +1374,7 @@ describe("JSONL v3 migration", () => {
 				cacheRead: 0,
 				cacheWrite: 0,
 				totalTokens: 30,
-				cost: {
-					input: 0.2,
-					output: 0.1,
-					cacheRead: 0,
-					cacheWrite: 0,
-					total: 0.3,
-				},
+				cost: { input: 0.2, output: 0.1, cacheRead: 0, cacheWrite: 0, total: 0.3, source: "pi" },
 			},
 			stopReason: "stop",
 			timestamp: abandonedResponseTimestamp,
@@ -1573,13 +1550,7 @@ describe("JSONL v3 migration", () => {
 			cacheRead: 10,
 			cacheWrite: 5,
 			totalTokens: 165,
-			cost: {
-				input: 1.2,
-				output: 0.3,
-				cacheRead: 0.1,
-				cacheWrite: 0.05,
-				total: 1.65,
-			},
+			cost: { input: 1.2, output: 0.3, cacheRead: 0.1, cacheWrite: 0.05, total: 1.65, source: "pi" },
 		} satisfies Usage;
 
 		async function openFixture(fromHook?: true) {

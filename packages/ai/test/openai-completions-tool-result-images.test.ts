@@ -16,7 +16,7 @@ const emptyUsage: Usage = {
 	cacheRead: 0,
 	cacheWrite: 0,
 	totalTokens: 0,
-	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 };
 
 const compat: Omit<
@@ -50,6 +50,7 @@ const compat: Omit<
 	sendSessionAffinityHeaders: false,
 	sessionAffinityFormat: "openai",
 	supportsLongCacheRetention: true,
+	openRouterReconcileCostFromGenerationEndpoint: false,
 };
 
 function buildToolResult(toolCallId: string, timestamp: number): ToolResultMessage {

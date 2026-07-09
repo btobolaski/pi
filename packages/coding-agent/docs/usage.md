@@ -84,6 +84,7 @@ pi --no-session        # Ephemeral mode; do not save
 pi --name "my task"    # Set session display name at startup
 pi --session <path|id> # Use a specific session file or session ID
 pi --fork <path|id>    # Fork a session into a new session file
+pi -r --cwd            # Resume a session in the current directory, not its stored one
 ```
 
 Useful session commands:
@@ -202,6 +203,7 @@ cat README.md | pi -p "Summarize this text"
 | `--session <path\|id>` | Use a specific session file or partial UUID |
 | `--fork <path\|id>` | Fork a session file or partial UUID into a new session |
 | `--session-dir <dir>` | Custom session storage directory |
+| `--cwd` | Run a resumed session in the current directory instead of its stored one |
 | `--no-session` | Ephemeral mode; do not save |
 | `--name <name>`, `-n <name>` | Set session display name at startup |
 

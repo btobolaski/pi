@@ -433,7 +433,7 @@ describe("ModelRegistry", () => {
 			}
 		});
 
-		test("model schema accepts thinkingLevelMap and compat schema accepts supportsStrictMode and cacheControlFormat", async () => {
+		test("model schema accepts thinkingLevelMap and compat schema accepts OpenAI completions flags", async () => {
 			writeRawModelsJson({
 				demo: {
 					baseUrl: "https://example.com/v1",
@@ -454,6 +454,10 @@ describe("ModelRegistry", () => {
 							compat: {
 								supportsStrictMode: false,
 								cacheControlFormat: "anthropic",
+								thinkingFormat: "ant-ling",
+								zaiToolStream: true,
+								sendSessionAffinityHeaders: true,
+								openRouterReconcileCostFromGenerationEndpoint: true,
 							},
 						},
 					],
@@ -468,6 +472,10 @@ describe("ModelRegistry", () => {
 			expect(model?.thinkingLevelMap).toEqual({ minimal: null, high: "max" });
 			expect(compat?.supportsStrictMode).toBe(false);
 			expect(compat?.cacheControlFormat).toBe("anthropic");
+			expect(compat?.thinkingFormat).toBe("ant-ling");
+			expect(compat?.zaiToolStream).toBe(true);
+			expect(compat?.sendSessionAffinityHeaders).toBe(true);
+			expect(compat?.openRouterReconcileCostFromGenerationEndpoint).toBe(true);
 		});
 
 		test("compat schema accepts chat template thinking configuration", async () => {
@@ -526,7 +534,61 @@ describe("ModelRegistry", () => {
 			});
 		});
 
-		test("compat schema accepts Anthropic eager tool input streaming flag", async () => {
+		test("compat schema rejects non-boolean openRouterReconcileCostFromGenerationEndpoint values", async () => {
+			writeRawModelsJson({
+				demo: {
+					baseUrl: "https://example.com/v1",
+					apiKey: "DEMO_KEY",
+					api: "openai-completions",
+					compat: {
+						openRouterReconcileCostFromGenerationEndpoint: "false",
+					},
+					models: [
+						{
+							id: "demo-model",
+							reasoning: false,
+							input: ["text"],
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+							contextWindow: 1000,
+							maxTokens: 100,
+						},
+					],
+				},
+			});
+
+			const registry = await createModelRegistry(authStorage, modelsJsonPath);
+			const error = registry.getError();
+			expect(error).toContain("providers.demo.compat.openRouterReconcileCostFromGenerationEndpoint");
+			expect(error).toContain("must be boolean");
+		});
+
+		test("compat schema tolerates unknown compat keys", async () => {
+			writeRawModelsJson({
+				demo: {
+					baseUrl: "https://example.com/v1",
+					apiKey: "DEMO_KEY",
+					api: "openai-completions",
+					compat: {
+						notARealCompatFlag: true,
+					},
+					models: [
+						{
+							id: "demo-model",
+							reasoning: false,
+							input: ["text"],
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+							contextWindow: 1000,
+							maxTokens: 100,
+						},
+					],
+				},
+			});
+
+			const registry = await createModelRegistry(authStorage, modelsJsonPath);
+			expect(registry.getError()).toBeUndefined();
+		});
+
+		test("compat schema accepts Anthropic flags", async () => {
 			writeRawModelsJson({
 				demo: {
 					baseUrl: "https://example.com",
@@ -534,6 +596,10 @@ describe("ModelRegistry", () => {
 					api: "anthropic-messages",
 					compat: {
 						supportsEagerToolInputStreaming: false,
+						supportsCacheControlOnTools: false,
+						supportsTemperature: false,
+						forceAdaptiveThinking: true,
+						allowEmptySignature: true,
 					},
 					models: [
 						{
@@ -553,6 +619,10 @@ describe("ModelRegistry", () => {
 
 			expect(registry.getError()).toBeUndefined();
 			expect(compat?.supportsEagerToolInputStreaming).toBe(false);
+			expect(compat?.supportsCacheControlOnTools).toBe(false);
+			expect(compat?.supportsTemperature).toBe(false);
+			expect(compat?.forceAdaptiveThinking).toBe(true);
+			expect(compat?.allowEmptySignature).toBe(true);
 		});
 
 		test("compat schema accepts long cache retention flag", async () => {

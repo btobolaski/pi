@@ -400,6 +400,7 @@ export interface Usage {
 		cacheRead: number;
 		cacheWrite: number;
 		total: number;
+		source: "provider" | "pi";
 	};
 }
 
@@ -640,6 +641,8 @@ export interface OpenAICompletionsCompat {
 	 * interactive sessions. Off by default; not set on the generated catalog.
 	 */
 	vllmPriority?: number;
+	/** When true and model.provider === "openrouter", after the stream finishes pi performs a GET to /api/v1/generation?id=<gen-id> (with one retry on 404, 429, or 5xx) and replaces usage.cost.total with the authoritative tiered total. The lookup has a ~2s timeout and is best-effort; failures are recorded in diagnostics without failing the request. Default: false. */
+	openRouterReconcileCostFromGenerationEndpoint?: boolean;
 }
 
 /** Compatibility settings for OpenAI Responses APIs. */

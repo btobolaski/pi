@@ -66,6 +66,7 @@ function usage(input: number, output: number, options: { cacheWrite1h?: number; 
 			cacheRead: (input + 1) / 100,
 			cacheWrite: (output + 1) / 100,
 			total: (input + output + 2) / 100,
+			source: "pi",
 		},
 	};
 }
@@ -77,7 +78,7 @@ function zeroUsage(): Usage {
 		cacheRead: 0,
 		cacheWrite: 0,
 		totalTokens: 0,
-		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 	};
 }
 
@@ -865,6 +866,7 @@ export function createStorageConformance(factory: () => Promise<StorageFixture>)
 							cacheRead: firstUsage.cost.cacheRead + secondUsage.cost.cacheRead,
 							cacheWrite: firstUsage.cost.cacheWrite + secondUsage.cost.cacheWrite,
 							total: firstUsage.cost.total + secondUsage.cost.total,
+							source: "pi",
 						},
 					},
 				});

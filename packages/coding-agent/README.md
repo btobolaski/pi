@@ -249,6 +249,7 @@ pi --no-session        # Ephemeral mode (don't save)
 pi --name "my task"    # Set session display name at startup
 pi --session <path|id> # Use specific session file or ID
 pi --fork <path|id>    # Fork specific session file or ID into a new session
+pi -r --cwd            # Resume session in the current directory, not its stored one
 ```
 
 Use `/session` in interactive mode to see the current session ID before reusing it with `--session <id>` or `--fork <id>`.
@@ -357,8 +358,12 @@ On-demand capability packages following the [Agent Skills standard](https://agen
 
 ```markdown
 <!-- ~/.pi/agent/skills/my-skill/SKILL.md -->
+---
+name: my-skill
+description: Use this skill when the user asks about X.
+---
+
 # My Skill
-Use this skill when the user asks about X.
 
 ## Steps
 1. Do this
@@ -573,6 +578,7 @@ cat README.md | pi -p "Summarize this text"
 | `--session <path\|id>` | Use specific session file or partial UUID |
 | `--fork <path\|id>` | Fork specific session file or partial UUID into a new session |
 | `--session-dir <dir>` | Custom session storage directory |
+| `--cwd` | Run resumed session in the current directory instead of its stored one |
 | `--no-session` | Ephemeral mode (don't save) |
 | `--name <name>`, `-n <name>` | Set session display name at startup |
 

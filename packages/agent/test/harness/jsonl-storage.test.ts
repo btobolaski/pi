@@ -84,7 +84,7 @@ describe("JsonlStorage snapshot creation", () => {
 				cacheRead: 0,
 				cacheWrite: 0,
 				totalTokens: 0,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 			},
 		});
 		expect(await storage.scanUsage({ order: "asc" }, BACKGROUND_CONTEXT)).toEqual([]);
@@ -122,6 +122,86 @@ describe("JsonlStorage snapshot creation", () => {
 });
 
 describe("JsonlStorage persistence", () => {
+	it("backfills missing cost provenance while replaying older usage rows and entries", async () => {
+		const fileSystem = new NodeExecutionEnv({ cwd: createTempDir() });
+		const options = { fileSystem, path: "legacy-usage.jsonl", now: () => NOW };
+		const usage = {
+			input: 1,
+			output: 2,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 3,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" as const },
+		};
+		const storage = await JsonlStorage.create(options, header("legacy-usage"), [], BACKGROUND_CONTEXT);
+		await storage.commit(
+			[
+				sessionWrites.insertEntry({
+					id: "tool",
+					parentId: null,
+					type: "message",
+					message: {
+						role: "toolResult",
+						toolCallId: "call",
+						toolName: "tool",
+						content: [],
+						usage,
+						isError: false,
+						timestamp: NOW,
+					},
+				}),
+				sessionWrites.insertEntry({
+					id: "branch",
+					parentId: "tool",
+					type: "branch_summary",
+					fromId: "tool",
+					summary: "summary",
+					usage,
+					fromHook: false,
+				}),
+				sessionWrites.insertEntry({
+					id: "compact",
+					parentId: "branch",
+					type: "compaction",
+					summary: "summary",
+					retainedTail: [
+						{
+							role: "assistant",
+							content: [],
+							api: "openai-completions",
+							provider: "openrouter",
+							model: "model",
+							usage,
+							stopReason: "stop",
+							timestamp: NOW,
+						},
+					],
+					tokensBefore: 3,
+					usage,
+					fromHook: false,
+				}),
+				sessionWrites.insertUsage({ id: "usage", entryId: "compact", adjustment: false, usage }),
+			],
+			BACKGROUND_CONTEXT,
+		);
+		await storage.close(BACKGROUND_CONTEXT);
+
+		const content = getOrThrow(await fileSystem.readTextFile(options.path, BACKGROUND_CONTEXT));
+		await fileSystem.writeFile(options.path, content.replaceAll(',"source":"pi"', ""), BACKGROUND_CONTEXT);
+
+		const reopened = await JsonlStorage.open(options, BACKGROUND_CONTEXT);
+		const entries = await reopened.getEntries(["tool", "branch", "compact"], BACKGROUND_CONTEXT);
+		expect(entries.get("tool")).toMatchObject({ message: { usage: { cost: { source: "pi" } } } });
+		expect(entries.get("branch")).toMatchObject({ usage: { cost: { source: "pi" } } });
+		expect(entries.get("compact")).toMatchObject({
+			usage: { cost: { source: "pi" } },
+			retainedTail: [{ usage: { cost: { source: "pi" } } }],
+		});
+		expect((await reopened.scanUsage({ order: "asc" }, BACKGROUND_CONTEXT))[0]?.usage.cost.source).toBe("pi");
+		expect((await reopened.getStats(BACKGROUND_CONTEXT)).usage.cost.source).toBe("pi");
+		await reopened.close(BACKGROUND_CONTEXT);
+	});
+
 	it("replays whole-list deletion without resurrecting earlier appends", async () => {
 		const fileSystem = new NodeExecutionEnv({ cwd: createTempDir() });
 		const options = { fileSystem, path: "list-delete.jsonl", now: () => NOW };
@@ -165,7 +245,7 @@ describe("JsonlStorage persistence", () => {
 						cacheRead: 0,
 						cacheWrite: 0,
 						totalTokens: 3,
-						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 					},
 				}),
 			],
@@ -206,7 +286,7 @@ describe("JsonlStorage persistence", () => {
 				cacheRead: 0,
 				cacheWrite: 0,
 				totalTokens: 3,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 			},
 		};
 		expect(await reopened.getStats(BACKGROUND_CONTEXT)).toEqual(historicalStats);

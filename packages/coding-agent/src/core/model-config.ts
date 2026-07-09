@@ -98,6 +98,7 @@ const OpenAICompletionsCompatSchema = Type.Object({
 	),
 	chatTemplateKwargs: Type.Optional(Type.Record(Type.String(), ChatTemplateKwargSchema)),
 	chatTemplateArgs: Type.Optional(Type.Record(Type.String(), ChatTemplateKwargSchema)),
+	zaiToolStream: Type.Optional(Type.Boolean()),
 	cacheControlFormat: Type.Optional(Type.Literal("anthropic")),
 	openRouterRouting: Type.Optional(OpenRouterRoutingSchema),
 	vercelGatewayRouting: Type.Optional(VercelGatewayRoutingSchema),
@@ -110,6 +111,7 @@ const OpenAICompletionsCompatSchema = Type.Object({
 	),
 	supportsLongCacheRetention: Type.Optional(Type.Boolean()),
 	vllmPriority: Type.Optional(Type.Number()),
+	openRouterReconcileCostFromGenerationEndpoint: Type.Optional(Type.Boolean()),
 });
 
 const OpenAIResponsesCompatSchema = Type.Object({
@@ -138,7 +140,8 @@ const AnthropicMessagesCompatSchema = Type.Object({
 	supportsToolReferences: Type.Optional(Type.Boolean()),
 });
 
-const ProviderCompatSchema = Type.Union([
+// Validate every known field while preserving the existing tolerance for unknown compat keys.
+const ProviderCompatSchema = Type.Intersect([
 	OpenAICompletionsCompatSchema,
 	OpenAIResponsesCompatSchema,
 	AnthropicMessagesCompatSchema,

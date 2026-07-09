@@ -38,6 +38,7 @@ import type {
 	MessageEntry,
 } from "../../src/harness/session/types.ts";
 import { getOrThrow } from "../../src/harness/types.ts";
+import { addUsage, normalizeEntryUsage, normalizeUsageCostSource } from "../../src/harness/utils/usage.ts";
 import type { AgentMessage } from "../../src/types.ts";
 
 let nextId = 0;
@@ -45,14 +46,20 @@ function createId(): string {
 	return `entry-${nextId++}`;
 }
 
-function createMockUsage(input: number, output: number, cacheRead = 0, cacheWrite = 0): Usage {
+function createMockUsage(
+	input: number,
+	output: number,
+	cacheRead = 0,
+	cacheWrite = 0,
+	source: Usage["cost"]["source"] = "pi",
+): Usage {
 	return {
 		input,
 		output,
 		cacheRead,
 		cacheWrite,
 		totalTokens: input + output + cacheRead + cacheWrite,
-		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source },
 	};
 }
 
@@ -151,6 +158,39 @@ function createModelsWithSimpleResponses(responses: AssistantMessage[]): Models 
 describe("harness compaction", () => {
 	beforeEach(() => {
 		nextId = 0;
+	});
+
+	it("normalizes and combines cost provenance", () => {
+		const providerUsage = createMockUsage(1, 2, 3, 4, "provider");
+		expect(normalizeUsageCostSource(providerUsage)).toBe(providerUsage);
+
+		const legacyUsage = createMockUsage(1, 2);
+		delete (legacyUsage.cost as Partial<Usage["cost"]>).source;
+		expect(normalizeUsageCostSource(legacyUsage).cost.source).toBe("pi");
+
+		for (const [left, right, expected] of [
+			["provider", "provider", "provider"],
+			["provider", "pi", "pi"],
+		] as const) {
+			expect(addUsage(createMockUsage(1, 2, 0, 0, left), createMockUsage(3, 4, 0, 0, right)).cost.source).toBe(
+				expected,
+			);
+		}
+	});
+
+	it("normalizes entry usage without changing entries that carry none", () => {
+		const custom = createCustomEntry("custom");
+		expect(normalizeEntryUsage(custom)).toBe(custom);
+
+		const user = createMessageEntry(createUserMessage("user"));
+		expect(normalizeEntryUsage(user)).toEqual(user);
+
+		const usage = createMockUsage(1, 2);
+		delete (usage.cost as Partial<Usage["cost"]>).source;
+		const compaction = createCompactionEntry("summary", null, [createAssistantMessage("retained", usage)]);
+		expect(normalizeEntryUsage(compaction)).toMatchObject({
+			retainedTail: [{ usage: { cost: { source: "pi" } } }],
+		});
 	});
 
 	it("calculates total context tokens from usage", () => {
@@ -709,12 +749,6 @@ describe("harness compaction", () => {
 	it("combines usage for split-turn compaction summaries", async () => {
 		const messages: AgentMessage[] = [createUserMessage("Summarize this.")];
 		const { model } = createFauxModel(false);
-		const historyUsage = createMockUsage(1, 2, 3, 4);
-		const turnPrefixUsage = createMockUsage(5, 6, 7, 8);
-		const usageModels = createModelsWithSimpleResponses([
-			{ ...fauxAssistantMessage("history summary"), usage: historyUsage },
-			{ ...fauxAssistantMessage("turn prefix summary"), usage: turnPrefixUsage },
-		]);
 		const preparation: CompactionPreparation = {
 			messagesToSummarize: messages,
 			turnPrefixMessages: messages,
@@ -724,12 +758,39 @@ describe("harness compaction", () => {
 			fileOps: { read: new Set(), written: new Set(), edited: new Set() },
 			settings: { enabled: true, reserveTokens: 2000, keepRecentTokens: 20 },
 		};
+		const sourceScenarios = [
+			["provider", "provider", "provider"],
+			["provider", "pi", "pi"],
+			["pi", "provider", "pi"],
+		] as const;
 
-		const result = getOrThrow(
-			await compact(preparation, usageModels, model, undefined, undefined, undefined, undefined, BACKGROUND_CONTEXT),
-		);
+		for (const [historySource, turnPrefixSource, expectedSource] of sourceScenarios) {
+			const usageModels = createModelsWithSimpleResponses([
+				{
+					...fauxAssistantMessage("history summary"),
+					usage: createMockUsage(1, 2, 3, 4, historySource),
+				},
+				{
+					...fauxAssistantMessage("turn prefix summary"),
+					usage: createMockUsage(5, 6, 7, 8, turnPrefixSource),
+				},
+			]);
 
-		expect(result.usage).toEqual(createMockUsage(6, 8, 10, 12));
+			const result = getOrThrow(
+				await compact(
+					preparation,
+					usageModels,
+					model,
+					undefined,
+					undefined,
+					undefined,
+					undefined,
+					BACKGROUND_CONTEXT,
+				),
+			);
+
+			expect(result.usage).toEqual(createMockUsage(6, 8, 10, 12, expectedSource));
+		}
 	});
 
 	it("passes reasoning through turn-prefix summaries when enabled", async () => {

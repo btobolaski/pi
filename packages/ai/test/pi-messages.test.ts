@@ -90,7 +90,7 @@ const usage = {
 	cacheRead: 0,
 	cacheWrite: 0,
 	totalTokens: 15,
-	cost: { input: 0.1, output: 0.2, cacheRead: 0, cacheWrite: 0, total: 0.3 },
+	cost: { input: 0.1, output: 0.2, cacheRead: 0, cacheWrite: 0, total: 0.3, source: "pi" as const },
 };
 
 describe("pi-messages", () => {
