@@ -1,10 +1,10 @@
 # Default to LF for text files across the repo
 * text=auto eol=lf
 
-# Windows scripts should keep CRLF
-*.bat text eol=crlf
-*.cmd text eol=crlf
-*.ps1 text eol=crlf
+# Windows scripts should keep their committed line endings
+*.bat -text
+*.cmd -text
+*.ps1 -text
 
 # Shell scripts should keep LF
 *.sh text eol=lf

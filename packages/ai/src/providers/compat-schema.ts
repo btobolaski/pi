@@ -335,6 +335,11 @@ export const OpenAICompletionsCompatSchema = Type.Object(
 			description:
 				'Whether the provider supports long prompt cache retention (prompt_cache_retention: "24h" or Anthropic-style cache_control.ttl: "1h", depending on format). Default: auto-detected from provider and URL.',
 		}),
+		openRouterReconcileCostFromGenerationEndpoint: optionalCompatBoolean({
+			description:
+				"After an OpenRouter stream, fetch the authoritative total from /api/v1/generation with one retry and a two-second timeout. Failures are recorded in diagnostics without failing the request.",
+			default: false,
+		}),
 		vllmPriority: Type.Optional(
 			Type.Number({
 				description:

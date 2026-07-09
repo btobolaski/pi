@@ -95,7 +95,7 @@ Use `contentIndex` to identify the content block. Buffer `delta` fields for a li
 The top-level `usage` is the latest cumulative provider-reported usage for the assistant response. It can remain zero until completion when a provider does not report usage while streaming.
 
 ```json
-{"type":"message_update","usage":{"input":100,"output":1,"cacheRead":0,"cacheWrite":0,"totalTokens":101,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"assistantMessageEvent":{"type":"text_delta","contentIndex":0,"delta":"Hello "}}
+{"type":"message_update","usage":{"input":100,"output":1,"cacheRead":0,"cacheWrite":0,"totalTokens":101,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0,"source":"pi"}},"assistantMessageEvent":{"type":"text_delta","contentIndex":0,"delta":"Hello "}}
 ```
 
 ## Tool execution events

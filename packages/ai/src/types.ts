@@ -468,6 +468,7 @@ export interface Usage {
 		cacheRead: number;
 		cacheWrite: number;
 		total: number;
+		source: "provider" | "pi";
 	};
 }
 

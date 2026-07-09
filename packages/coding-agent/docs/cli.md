@@ -89,6 +89,8 @@ See [Sessions and Context](sessions.md) for resuming, forking, naming, and stori
   Opens the session selector.
 - `--session <path|id>`<br>
   Opens by file path, exact ID, or partial ID. Pi searches the current project first and offers to fork a cross-project match.
+- `--cwd`<br>
+  Runs a resumed session in the launch directory instead of its stored directory, without forking. Applies only at startup, not to `/resume`.
 - `--session-id <id>`<br>
   Opens the exact project session ID or creates it if absent. IDs accept letters, numbers, `.`, `_`, and `-`.
 - `--fork <path|id>`<br>

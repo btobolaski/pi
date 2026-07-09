@@ -93,6 +93,41 @@ async function waitFor(condition: () => boolean, timeoutMs = 3000): Promise<void
 	}
 }
 
+/** Long enough for WATCH_DEBOUNCE_MS plus the async branch resolve to settle. */
+const REFRESH_SETTLE_MS = 650;
+
+/**
+ * fs.watch is not armed the moment watch() returns, and watchFile takes its
+ * baseline stat asynchronously. A write landing inside that startup window is
+ * dropped by every mechanism the provider registers, and the event is gone for
+ * good, so waiting longer never recovers it. Rewrite tables.list until a
+ * refresh is observed, which proves the watchers are armed, then let the
+ * debounce drain and reset the mocks so callers still assert on exactly the
+ * write they perform themselves.
+ */
+async function armReftableWatchers(reftableDir: string): Promise<void> {
+	const tablesListPath = join(reftableDir, "tables.list");
+	const startedAt = Date.now();
+	let attempt = 0;
+	while (vi.mocked(execFile).mock.calls.length === 0) {
+		if (Date.now() - startedAt > 15000) {
+			throw new Error("Timed out arming the reftable watchers");
+		}
+		writeFileSync(tablesListPath, `arm-${attempt++}\n`);
+		await new Promise((resolve) => setTimeout(resolve, 100));
+	}
+
+	// Drain the observed refresh and any follow-up it queued.
+	let settledCallCount = -1;
+	while (settledCallCount !== vi.mocked(execFile).mock.calls.length) {
+		settledCallCount = vi.mocked(execFile).mock.calls.length;
+		await new Promise((resolve) => setTimeout(resolve, REFRESH_SETTLE_MS));
+	}
+
+	vi.mocked(execFile).mockClear();
+	vi.mocked(spawnSync).mockClear();
+}
+
 describe("FooterDataProvider reftable branch detection", () => {
 	let originalCwd: string;
 	let tempDir: string;
@@ -175,14 +210,14 @@ describe("FooterDataProvider reftable branch detection", () => {
 
 	// Drive debounce behavior explicitly; native fs.watch delivery can race watcher startup.
 	it("does not notify listeners when reftable updates keep the same branch", async () => {
-		vi.useFakeTimers();
-		const { worktreeDir } = createReftableWorktree(tempDir);
+		const { worktreeDir, reftableDir } = createReftableWorktree(tempDir);
 		process.chdir(worktreeDir);
 
 		const provider = new FooterDataProvider(worktreeDir);
 		try {
 			expect(provider.getGitBranch()).toBe("main");
-			vi.mocked(spawnSync).mockClear();
+			await armReftableWatchers(reftableDir);
+			vi.useFakeTimers();
 			const onBranchChange = vi.fn();
 			provider.onBranchChange(onBranchChange);
 
@@ -200,14 +235,14 @@ describe("FooterDataProvider reftable branch detection", () => {
 	});
 
 	it("debounces rapid reftable updates into a single async refresh", async () => {
-		vi.useFakeTimers();
-		const { worktreeDir } = createReftableWorktree(tempDir);
+		const { worktreeDir, reftableDir } = createReftableWorktree(tempDir);
 		process.chdir(worktreeDir);
 
 		const provider = new FooterDataProvider(worktreeDir);
 		try {
 			expect(provider.getGitBranch()).toBe("main");
-			vi.mocked(execFile).mockClear();
+			await armReftableWatchers(reftableDir);
+			vi.useFakeTimers();
 
 			emitReftableChange(provider);
 			emitReftableChange(provider);
@@ -231,6 +266,7 @@ describe("FooterDataProvider reftable branch detection", () => {
 		const provider = new FooterDataProvider(worktreeDir);
 		try {
 			expect(provider.getGitBranch()).toBe("main");
+			await armReftableWatchers(reftableDir);
 			resolvedBranch = "foo";
 			const onBranchChange = vi.fn();
 			provider.onBranchChange(onBranchChange);

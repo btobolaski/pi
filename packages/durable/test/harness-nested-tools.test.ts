@@ -411,7 +411,7 @@ describe("nested tool calls", () => {
 			cacheRead: 0,
 			cacheWrite: 0,
 			totalTokens: 3,
-			cost: { input: 0.1, output: 0.2, cacheRead: 0, cacheWrite: 0, total: 0.3 },
+			cost: { input: 0.1, output: 0.2, cacheRead: 0, cacheWrite: 0, total: 0.3, source: "pi" },
 		};
 		addTool(
 			setup.registry,
@@ -1203,7 +1203,7 @@ describe("nested tool calls", () => {
 			cacheRead: 0,
 			cacheWrite: 0,
 			totalTokens: 3,
-			cost: { input: 0.1, output: 0.2, cacheRead: 0, cacheWrite: 0, total: 0.3 },
+			cost: { input: 0.1, output: 0.2, cacheRead: 0, cacheWrite: 0, total: 0.3, source: "pi" },
 		};
 		addTool(setup.registry, echoTool().registration);
 		addTool(

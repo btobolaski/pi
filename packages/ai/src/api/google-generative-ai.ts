@@ -77,7 +77,7 @@ export const stream: StreamFunction<"google-generative-ai", GoogleOptions> = (
 				cacheRead: 0,
 				cacheWrite: 0,
 				totalTokens: 0,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 			},
 			stopReason: "pending",
 			timestamp: Date.now(),
@@ -245,6 +245,7 @@ export const stream: StreamFunction<"google-generative-ai", GoogleOptions> = (
 							cacheRead: 0,
 							cacheWrite: 0,
 							total: 0,
+							source: "pi",
 						},
 					};
 					calculateCost(model, output.usage);

@@ -66,7 +66,7 @@ describe("createAgentSession stream options", () => {
 				cacheRead: promptTokens,
 				cacheWrite: 0,
 				totalTokens: promptTokens,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, source: "pi" },
 			},
 			stopReason: "stop",
 			timestamp: Date.now(),
