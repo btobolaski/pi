@@ -394,7 +394,7 @@ Response:
       "cacheRead": 0,
       "cacheWrite": 0,
       "totalTokens": 33200,
-      "cost": {"input": 0.01, "output": 0.02, "cacheRead": 0, "cacheWrite": 0, "total": 0.03}
+      "cost": {"input": 0.01, "output": 0.02, "cacheRead": 0, "cacheWrite": 0, "total": 0.03, "source": "pi"}
     },
     "details": {}
   }

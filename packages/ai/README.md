@@ -457,7 +457,7 @@ const credential = {
 Built-in providers resolve these env vars (Node.js; in browsers pass `apiKey` explicitly):
 
 | Provider | Environment Variable(s) |
-|----------|------------------------|
+| ---------- | ------------------------ |
 | OpenAI | `OPENAI_API_KEY` |
 | Ant Ling | `ANT_LING_API_KEY` |
 | Azure OpenAI | `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_BASE_URL` (e.g. `https://{resource}.ai.azure.com`) or `AZURE_OPENAI_RESOURCE_NAME`. Supports `*.openai.azure.com`, `*.cognitiveservices.azure.com` and `*.ai.azure.com`; root endpoints auto-normalize to `/openai/v1`. Optional: `AZURE_OPENAI_API_VERSION` (default `v1`), `AZURE_OPENAI_DEPLOYMENT_NAME_MAP`. |
@@ -656,6 +656,7 @@ for await (const event of s) {
 ```
 
 **Important notes about partial tool arguments:**
+
 - During `toolcall_delta` events, `arguments` contains the best-effort parse of partial JSON
 - Fields may be missing or incomplete - always check for existence before use
 - String values may be truncated mid-word
@@ -707,7 +708,7 @@ Every non-terminal event's `partial` is the shared live response-so-far helper. 
 All streaming events emitted during assistant message generation:
 
 | Event Type | Description | Key Properties |
-|------------|-------------|----------------|
+| ------------ | ------------- | ---------------- |
 | `start` | Stream begins | `partial`: Initial assistant message structure |
 | `text_start` | Text block starts | `contentIndex`: Position in content array |
 | `text_delta` | Text chunk received | `delta`: New text, `contentIndex`: Position |
@@ -1366,7 +1367,7 @@ const s = stream(claudeModel, normalizeContext(context), {
 Built-in API implementations live under `./api/<api-id>`:
 
 | API id | Options type |
-|--------|--------------|
+| -------- | -------------- |
 | `anthropic-messages` | `AnthropicOptions` |
 | `openai-completions` | `OpenAICompletionsOptions` |
 | `openai-responses` | `OpenAIResponsesOptions` |
@@ -1408,6 +1409,7 @@ interface OpenAICompletionsCompat {
   cacheControlFormat?: 'anthropic';  // Anthropic-style cache_control on system prompt, last tool, and last user/assistant text content
   openRouterRouting?: OpenRouterRouting; // OpenRouter routing preferences (default: {})
   vercelGatewayRouting?: VercelGatewayRouting; // Vercel AI Gateway routing preferences (default: {})
+  openRouterReconcileCostFromGenerationEndpoint?: boolean; // When true, pi fetches /api/v1/generation?id=<gen-id> after each stream and replaces usage.cost.total with the authoritative tiered total (default: false)
 }
 
 interface OpenAIResponsesCompat {
@@ -1420,6 +1422,8 @@ interface OpenAIResponsesCompat {
 ```
 
 OpenRouter requests send `x-session-id` from `sessionId` when prompt caching is enabled. Chat Completions and Anthropic Messages both auto-detect OpenRouter endpoints unless `sendSessionAffinityHeaders` is explicitly false. On Anthropic-compatible models, `sessionAffinityFormat: "openrouter"` selects `x-session-id`; when unset, the existing `x-session-affinity` format is used. Explicit request headers take precedence over generated headers.
+
+For OpenRouter Chat Completions, pi uses the streamed `usage.cost` total when OpenRouter provides it and sets `usage.cost.source` to `"provider"`; if the stream omits cost, pi uses model pricing metadata and sets the source to `"pi"`. The optional reconciliation flag replaces the streamed total with the generation endpoint's authoritative tiered total.
 
 If `compat` is not set, the library falls back to URL-based detection. If `compat` is partially set, unspecified fields use the detected defaults. This is useful for:
 
@@ -1504,6 +1508,7 @@ console.log(faux.state.callCount);
 ```
 
 Notes:
+
 - Responses are consumed from a queue in request start order.
 - If the queue is empty, the faux provider returns an assistant error message with `errorMessage: "No more faux responses queued"`.
 - Use `faux.setResponses([...])` to replace the remaining queue and `faux.appendResponses([...])` to add more responses.
@@ -1832,7 +1837,7 @@ import { getModel, complete } from '@earendil-works/pi-ai/compat';
 Compat is a strict superset of the root entrypoint, so a file can switch its import path wholesale. It will be removed in a future release; migrate to `createModels()` + provider factories:
 
 | Old | New |
-|-----|-----|
+| ----- | ----- |
 | `getModel('openai', 'gpt-4o-mini')` | `models.getModel('openai', 'gpt-4o-mini')` or `getBuiltinModel()` from `providers/all` |
 | `getModels('anthropic')` / `getProviders()` | `models.getModels('anthropic')` / `models.getProviders()` or `getBuiltin*` |
 | `stream(model, ctx, opts)` (env-key injection) | `models.stream(model, ctx, opts)` (provider auth resolution) |
