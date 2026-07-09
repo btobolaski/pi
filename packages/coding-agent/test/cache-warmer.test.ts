@@ -50,7 +50,7 @@ const warmUsage: Usage = {
 	cacheRead: 100,
 	cacheWrite: 0,
 	totalTokens: 101,
-	cost: { input: 0, output: 0, cacheRead: 0.01, cacheWrite: 0, total: 0.01 },
+	cost: { input: 0, output: 0, cacheRead: 0.01, cacheWrite: 0, total: 0.01, source: "pi" },
 };
 
 function response(model: Model<Api>, stopReason: AssistantMessage["stopReason"] = "length"): AssistantMessage {
@@ -322,7 +322,14 @@ describe("cache warming", () => {
 		);
 		const usage = {
 			...warmUsage,
-			cost: { input: 0.00004, output: 0.00005, cacheRead: 0.02940725, cacheWrite: 0, total: 0.02949725 },
+			cost: {
+				input: 0.00004,
+				output: 0.00005,
+				cacheRead: 0.02940725,
+				cacheWrite: 0,
+				total: 0.02949725,
+				source: "pi" as const,
+			},
 		};
 		const entry = SessionManager.inMemory().appendUsage(
 			"cache_warm",

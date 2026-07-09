@@ -147,7 +147,7 @@ These hooks power extension request inspection, response-header events, and prov
 
 ## Report failures and usage
 
-Set a concrete terminal stop reason. Error and aborted messages need an `errorMessage`; successful messages need accurate input, output, cache, total-token, and cost values.
+Set a concrete terminal stop reason. Error and aborted messages need an `errorMessage`; successful messages need accurate input, output, cache, total-token, and cost values. Set `usage.cost.source` to `"provider"` for a provider-reported total or `"pi"` for catalog pricing; `calculateCost()` sets `"pi"`.
 
 Pi can compact and retry after recognized context-overflow errors. If the service uses an unknown message, normalize only that provider’s overflow response to `context_length_exceeded` in a guarded `message_end` handler.
 
