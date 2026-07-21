@@ -16,9 +16,23 @@
         "type": "github"
       }
     },
+    "pi-ai-release": {
+      "flake": false,
+      "locked": {
+        "lastModified": 499162500,
+        "narHash": "sha256-3jbhoI1KQAlazKfAmV+QNyx7Ym9k7EQ7l/7DUcGV1xE=",
+        "type": "tarball",
+        "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.3.tgz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.3.tgz"
+      }
+    },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "pi-ai-release": "pi-ai-release"
       }
     }
   },
