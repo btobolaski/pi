@@ -3,9 +3,18 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    pi-ai-release = {
+      url = "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.85.1.tgz";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      pi-ai-release,
+    }:
     let
       forAllSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
       # npm ships platform-specific prebuilt binaries (e.g.
@@ -15,13 +24,18 @@
       # in buildFHSEnv, which provides a standard FHS layout (including the
       # loader) so the unmodified npm binaries run as-is. macOS uses Mach-O
       # binaries and needs no such wrapper, so it keeps a plain mkShell.
-      mkShell = { system, withBun ? true }:
+      mkShell =
+        {
+          system,
+          withBun ? true,
+        }:
         let
           pkgs = nixpkgs.legacyPackages.${system};
           lib = pkgs.lib;
           shellPackages = [
             pkgs.nodejs_22
-          ] ++ lib.optionals withBun [
+          ]
+          ++ lib.optionals withBun [
             pkgs.bun
           ];
           banner = ''
@@ -46,19 +60,35 @@
             shellHook = banner;
           };
 
-      mkCodingAgent = system:
+      mkCodingAgent =
+        system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
           inherit (pkgs) lib;
           codingAgentPackageJson = lib.importJSON ./packages/coding-agent/package.json;
+          piAiReleasePackageJson = lib.importJSON "${pi-ai-release}/package.json";
         in
+        assert piAiReleasePackageJson.version == codingAgentPackageJson.version;
         pkgs.buildNpmPackage (finalAttrs: {
           pname = "pi-coding-agent";
           version = codingAgentPackageJson.version;
 
+          # Match the dev shell and CI. Node 24's ESM loader mismanages file
+          # descriptors (readFileSync in node:internal/modules/esm/load), which
+          # surfaces as spurious EBADF during concurrent file reads.
+          nodejs = pkgs.nodejs_22;
+
           src = ./.;
 
-          npmDepsHash = "sha256-XGvDNH+eilsgc0Z7ITqbitB/9RVc+WuDfCcr1pibNqk=";
+          # Model values are generated into ignored JSON files and included in
+          # the published pi-ai package. Seed the sandboxed source build from
+          # that lockstep-versioned package instead of calling model APIs.
+          postPatch = ''
+            mkdir -p packages/ai/src/providers/data
+            cp -r ${pi-ai-release}/dist/providers/data/. packages/ai/src/providers/data/
+          '';
+
+          npmDepsHash = "sha256-jzlsZIQzfl1FCZZ5//dHFWwMfBZQ4nRD6KB4HHifPqE=";
 
           npmWorkspace = "packages/coding-agent";
 
@@ -71,14 +101,18 @@
 
           # Build workspace dependencies in order, then the coding-agent.
           # We invoke tsgo directly for workspace deps to skip pi-ai's
-          # generate-models script which requires network access
-          # (models.generated.ts is committed to the repo).
+          # network-dependent generate-models script; postPatch supplies its
+          # generated model data from the lockstep-versioned package input.
           buildPhase = ''
             runHook preBuild
 
+            npx tsgo -p packages/telemetry/tsconfig.build.json
             npx tsgo -p packages/ai/tsconfig.build.json
             npx tsgo -p packages/tui/tsconfig.build.json
+            npx tsgo -p packages/chord/tsconfig.build.json
             npx tsgo -p packages/agent/tsconfig.build.json
+            npx tsgo -p packages/protocol/tsconfig.build.json
+            npx tsgo -p packages/client/tsconfig.build.json
             npm run build --workspace=packages/coding-agent
 
             runHook postBuild
@@ -91,9 +125,13 @@
             local nm="$out/lib/node_modules/pi-monorepo/node_modules"
 
             # Replace workspace deps needed at runtime with real copies
-            for ws in @earendil-works/pi-ai:packages/ai \
+            for ws in @earendil-works/pi-telemetry:packages/telemetry \
+                      @earendil-works/pi-ai:packages/ai \
+                      @earendil-works/chord:packages/chord \
                       @earendil-works/pi-agent-core:packages/agent \
-                      @earendil-works/pi-tui:packages/tui; do
+                      @earendil-works/pi-tui:packages/tui \
+                      @earendil-works/pi-protocol:packages/protocol \
+                      @earendil-works/pi-client:packages/client; do
               IFS=: read -r pkg src <<< "$ws"
               rm "$nm/$pkg"
               cp -r "$src" "$nm/$pkg"
@@ -148,7 +186,10 @@
     {
       devShells = forAllSystems (system: {
         default = mkShell { inherit system; };
-        no-bun = mkShell { inherit system; withBun = false; };
+        no-bun = mkShell {
+          inherit system;
+          withBun = false;
+        };
       });
 
       packages = forAllSystems (system: {
