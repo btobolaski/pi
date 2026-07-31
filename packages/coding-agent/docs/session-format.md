@@ -389,7 +389,7 @@ Key methods for working with sessions programmatically.
 
 ### Static Creation Methods
 - `SessionManager.create(cwd, sessionDir?)` - New session
-- `SessionManager.open(path, sessionDir?)` - Open existing session file
+- `SessionManager.open(path, sessionDir?, cwdOverride?)` - Open existing session file, optionally running it in a cwd other than the stored one
 - `SessionManager.continueRecent(cwd, sessionDir?)` - Continue most recent or create new
 - `SessionManager.inMemory(cwd?)` - No file persistence
 - `SessionManager.forkFrom(sourcePath, targetCwd, sessionDir?)` - Fork session from another project
