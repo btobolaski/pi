@@ -63,7 +63,7 @@ Pi saves sessions automatically unless session persistence is disabled.
 
 Use `/tree`, `/fork`, or `/clone` when you want to explore another approach without losing existing work. Use `/compact` to reduce the conversation history sent to the model. See [Sessions and Context](sessions.md) for these workflows.
 
-After leaving Pi, run `pi --continue` from the same folder to resume its most recent session.
+After leaving Pi, run `pi --continue` from the same folder to resume its most recent session. Use `pi -r --cwd` to resume a selected session in the launch directory instead of its stored directory.
 
 ## Run a terminal command
 

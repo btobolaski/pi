@@ -17,6 +17,12 @@ Use `/name` or `--name` to assign a recognizable session name. Run `/session` to
 
 The session picker lets you search, rename, and delete sessions. It can also show paths, change sorting, and limit results to named sessions. See [Keybindings](keybindings.md#sessions) for its shortcuts.
 
+### Resume in the launch directory
+
+Use `pi -r --cwd` or `pi --session <path|id> --cwd` to run a resumed session in the directory where Pi started instead of its stored directory. This suits worktrees sharing session storage: the session keeps appending to its original file, and `--cwd` skips the cross-project fork prompt.
+
+The flag applies only at startup. `/resume` inside a running session still uses the selected session's stored directory.
+
 ## Choose how to branch
 
 Pi stores entries as a tree, so returning to an earlier point does not erase the branch you leave.
