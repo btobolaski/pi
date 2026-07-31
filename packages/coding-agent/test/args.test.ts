@@ -84,6 +84,25 @@ describe("parseArgs", () => {
 		});
 	});
 
+	describe("--cwd flag", () => {
+		test("takes no value and leaves the following flag intact", () => {
+			const result = parseArgs(["--cwd", "--resume"]);
+			expect(result.useLaunchCwd).toBe(true);
+			expect(result.resume).toBe(true);
+			expect(result.unknownFlags.size).toBe(0);
+		});
+
+		test("leaves a following message as a message", () => {
+			const result = parseArgs(["--cwd", "keep going"]);
+			expect(result.useLaunchCwd).toBe(true);
+			expect(result.messages).toEqual(["keep going"]);
+		});
+
+		test("defaults to undefined", () => {
+			expect(parseArgs(["--resume"]).useLaunchCwd).toBeUndefined();
+		});
+	});
+
 	describe("flags with values", () => {
 		test("parses --provider", () => {
 			const result = parseArgs(["--provider", "openai"]);
